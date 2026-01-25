@@ -1,6 +1,6 @@
 import path from 'path';
 import { MemoryManager, Message } from '../memory';
-import { buildMCPServers, setMemoryManager, ToolsConfig, validateToolsConfig } from '../tools';
+import { buildMCPServers, buildSdkMcpServers, setMemoryManager, ToolsConfig, validateToolsConfig } from '../tools';
 import { closeBrowserManager } from '../browser';
 import { loadIdentity } from '../config/identity';
 import { EventEmitter } from 'events';
@@ -69,6 +69,8 @@ class AgentManagerClass extends EventEmitter {
   private toolsConfig: ToolsConfig | null = null;
   private initialized: boolean = false;
   private identity: string = '';
+  private currentAbortController: AbortController | null = null;
+  private isProcessing: boolean = false;
 
   private constructor() {
     super();
@@ -121,38 +123,44 @@ class AgentManagerClass extends EventEmitter {
       throw new Error('AgentManager not initialized - call initialize() first');
     }
 
+    if (this.isProcessing) {
+      throw new Error('A message is already being processed');
+    }
+
+    this.isProcessing = true;
+    this.currentAbortController = new AbortController();
     let wasCompacted = false;
 
-    const statsBefore = this.memory.getStats();
-    if (statsBefore.estimatedTokens > COMPACTION_THRESHOLD) {
-      console.log('[AgentManager] Token limit approaching, running compaction...');
-      await this.runCompaction();
-      wasCompacted = true;
-    }
-
-    const context = await this.memory.getConversationContext(MAX_CONTEXT_TOKENS);
-    const factsContext = this.memory.getFactsForContext();
-
-    console.log(`[AgentManager] Loaded ${context.messages.length} messages (${context.totalTokens} tokens)`);
-
-    const contextParts: string[] = [];
-
-    if (context.messages.length > 0) {
-      const historyText = context.messages
-        .map((m: Message) => `${m.role.toUpperCase()}: ${m.content}`)
-        .join('\n\n');
-      contextParts.push(`Previous conversation:\n${historyText}`);
-    }
-
-    const fullPrompt = contextParts.length > 0
-      ? `${contextParts.join('\n\n---\n\n')}\n\n---\n\nUser: ${userMessage}`
-      : userMessage;
-
     try {
+      const statsBefore = this.memory.getStats();
+      if (statsBefore.estimatedTokens > COMPACTION_THRESHOLD) {
+        console.log('[AgentManager] Token limit approaching, running compaction...');
+        await this.runCompaction();
+        wasCompacted = true;
+      }
+
+      const context = await this.memory.getConversationContext(MAX_CONTEXT_TOKENS);
+      const factsContext = this.memory.getFactsForContext();
+
+      console.log(`[AgentManager] Loaded ${context.messages.length} messages (${context.totalTokens} tokens)`);
+
+      const contextParts: string[] = [];
+
+      if (context.messages.length > 0) {
+        const historyText = context.messages
+          .map((m: Message) => `${m.role.toUpperCase()}: ${m.content}`)
+          .join('\n\n');
+        contextParts.push(`Previous conversation:\n${historyText}`);
+      }
+
+      const fullPrompt = contextParts.length > 0
+        ? `${contextParts.join('\n\n---\n\n')}\n\n---\n\nUser: ${userMessage}`
+        : userMessage;
+
       const query = await loadSDK();
       if (!query) throw new Error('Failed to load SDK');
 
-      const options = this.buildOptions(factsContext);
+      const options = await this.buildOptions(factsContext);
 
       console.log('[AgentManager] Calling query()...');
       this.emitStatus({ type: 'thinking', message: 'Processing...' });
@@ -161,6 +169,11 @@ class AgentManagerClass extends EventEmitter {
       let response = '';
 
       for await (const message of queryResult) {
+        // Check if aborted
+        if (this.currentAbortController?.signal.aborted) {
+          console.log('[AgentManager] Query aborted by user');
+          throw new Error('Query stopped by user');
+        }
         this.processStatusFromMessage(message);
         response = this.extractFromMessage(message, response);
       }
@@ -189,13 +202,39 @@ class AgentManagerClass extends EventEmitter {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error('[AgentManager] Query failed:', errorMsg);
 
-      this.memory.saveMessage('user', userMessage);
+      // Only save user message if not aborted
+      if (!this.currentAbortController?.signal.aborted) {
+        this.memory.saveMessage('user', userMessage);
+      }
 
       throw error;
+    } finally {
+      this.isProcessing = false;
+      this.currentAbortController = null;
     }
   }
 
-  private buildOptions(factsContext: string): SDKOptions {
+  /**
+   * Stop the currently running query
+   */
+  stopQuery(): boolean {
+    if (this.isProcessing && this.currentAbortController) {
+      console.log('[AgentManager] Stopping current query...');
+      this.currentAbortController.abort();
+      this.emitStatus({ type: 'done' });
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Check if a query is currently processing
+   */
+  isQueryProcessing(): boolean {
+    return this.isProcessing;
+  }
+
+  private async buildOptions(factsContext: string): Promise<SDKOptions> {
     const appendParts: string[] = [];
 
     if (this.identity) {
@@ -216,9 +255,25 @@ class AgentManagerClass extends EventEmitter {
       model: this.model,
       cwd: this.projectRoot,
       maxTurns: 20,
-      abortController: new AbortController(),
+      abortController: this.currentAbortController || new AbortController(),
       tools: { type: 'preset', preset: 'claude_code' },
-      allowedTools: ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'WebSearch', 'WebFetch'],
+      allowedTools: [
+        // Built-in SDK tools
+        'Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'WebSearch', 'WebFetch',
+        // Custom MCP tools - browser & system
+        'mcp__pocket-agent__browser',
+        'mcp__pocket-agent__notify',
+        'mcp__pocket-agent__pty_exec',
+        // Custom MCP tools - memory
+        'mcp__pocket-agent__remember',
+        'mcp__pocket-agent__forget',
+        'mcp__pocket-agent__list_facts',
+        'mcp__pocket-agent__memory_search',
+        // Custom MCP tools - scheduler
+        'mcp__pocket-agent__schedule_task',
+        'mcp__pocket-agent__list_scheduled_tasks',
+        'mcp__pocket-agent__delete_scheduled_task',
+      ],
       persistSession: false,
     };
 
@@ -231,11 +286,21 @@ class AgentManagerClass extends EventEmitter {
     }
 
     if (this.toolsConfig) {
+      // Build child process MCP servers (e.g., computer use)
       const mcpServers = buildMCPServers(this.toolsConfig);
 
-      if (Object.keys(mcpServers).length > 0) {
-        options.mcpServers = mcpServers;
-        console.log('[AgentManager] MCP servers:', Object.keys(mcpServers).join(', '));
+      // Build SDK MCP servers (in-process tools like browser, notify, memory)
+      const sdkMcpServers = await buildSdkMcpServers(this.toolsConfig);
+
+      // Merge both types
+      const allServers = {
+        ...mcpServers,
+        ...(sdkMcpServers || {}),
+      };
+
+      if (Object.keys(allServers).length > 0) {
+        options.mcpServers = allServers;
+        console.log('[AgentManager] MCP servers:', Object.keys(allServers).join(', '));
       }
     }
 
@@ -250,34 +315,82 @@ class AgentManagerClass extends EventEmitter {
 You are a persistent personal AI assistant with special capabilities.
 
 ### Scheduling & Reminders
-You CAN create scheduled tasks and reminders! The CLI is already installed and ready - just run the commands below. Do NOT try to install anything or run npm/yarn commands.
+You CAN create scheduled tasks and reminders! Three schedule types are supported:
 
 \`\`\`bash
-# Create a reminder
-node "${cliPath}" create "water_reminder" "0 */2 * * *" "Time to drink some water!" "desktop"
+# ONE-TIME reminder (auto-deletes after running)
+node "${cliPath}" add "call_mom" "in 2 hours" "Time to call mom!"
+node "${cliPath}" add "meeting_prep" "tomorrow 9am" "Prepare for the meeting"
 
-# List all tasks
+# RECURRING with interval
+node "${cliPath}" add "water" "2h" "Time to drink water!"
+node "${cliPath}" add "break" "30m" "Take a short break"
+
+# RECURRING with cron expression
+node "${cliPath}" add "standup" "0 9 * * 1-5" "Daily standup time" --channel desktop
+
+# With context (includes recent messages in the prompt)
+node "${cliPath}" add "followup" "in 1 hour" "Follow up on our conversation" --context 5
+
+# List/delete/status
 node "${cliPath}" list
-
-# Delete a task
-node "${cliPath}" delete "water_reminder"
+node "${cliPath}" delete "water"
+node "${cliPath}" status
 \`\`\`
 
+Schedule formats:
+- One-time: "in 2 hours", "tomorrow 3pm", "monday 9am"
+- Interval: "30m", "2h", "1d" (runs every X)
+- Cron: "0 9 * * *" (minute hour day month weekday)
+
+Options:
+- --context N: Include last N messages as context (max 10)
+- --channel: "desktop" or "telegram"
+
 RULES:
-- Use short, clean names (e.g., "water_reminder", "standup", "break_time") - NO timestamps
-- Do NOT run npm, yarn, or any install commands - the CLI is ready to use
-- Just run the node command directly
+- Use short, clean names (water, standup, break) - NO timestamps
+- One-time jobs auto-delete after running
+- Do NOT run npm/yarn - CLI is ready to use
 
-Cron format: "minute hour day month weekday" (0-59 0-23 1-31 1-12 0-7)
-- "0 9 * * *" = Daily 9 AM
-- "0 9 * * 1-5" = Weekdays 9 AM
-- "*/30 * * * *" = Every 30 min
-- "0 */2 * * *" = Every 2 hours
-- "0 9 * * 1" = Mondays 9 AM
+### Calendar Events
+You can manage calendar events with reminders:
 
-Channels: "desktop" (notification + chat) or "telegram"
+\`\`\`bash
+# Add an event
+node "${path.join(this.projectRoot, 'dist/cli/calendar-cli.js')}" add "Team meeting" "tomorrow 2pm" --reminder 15
+node "${path.join(this.projectRoot, 'dist/cli/calendar-cli.js')}" add "Lunch with Sarah" "today 12pm" --end "today 1pm" --location "Cafe"
 
-The scheduler checks for new tasks every 60 seconds, so tasks become active shortly after creation.
+# List events
+node "${path.join(this.projectRoot, 'dist/cli/calendar-cli.js')}" list today
+node "${path.join(this.projectRoot, 'dist/cli/calendar-cli.js')}" upcoming 24
+
+# Delete event
+node "${path.join(this.projectRoot, 'dist/cli/calendar-cli.js')}" delete <id>
+\`\`\`
+
+Time formats: "today 3pm", "tomorrow 9am", "monday 2pm", "in 2 hours", ISO format
+Reminders trigger automatically before the event starts.
+
+### Tasks / Todos
+You can manage tasks with due dates and priorities:
+
+\`\`\`bash
+# Add a task
+node "${path.join(this.projectRoot, 'dist/cli/tasks-cli.js')}" add "Buy groceries" --due "tomorrow" --priority high
+node "${path.join(this.projectRoot, 'dist/cli/tasks-cli.js')}" add "Call mom" --due "today 5pm" --reminder 30
+
+# List tasks
+node "${path.join(this.projectRoot, 'dist/cli/tasks-cli.js')}" list pending
+node "${path.join(this.projectRoot, 'dist/cli/tasks-cli.js')}" list all
+node "${path.join(this.projectRoot, 'dist/cli/tasks-cli.js')}" due 24
+
+# Complete/delete task
+node "${path.join(this.projectRoot, 'dist/cli/tasks-cli.js')}" complete <id>
+node "${path.join(this.projectRoot, 'dist/cli/tasks-cli.js')}" delete <id>
+\`\`\`
+
+Priorities: low, medium, high
+Status: pending, in_progress, completed
 
 ### Memory & Facts
 You have persistent memory! PROACTIVELY save important info when the user shares it. Use the memory CLI:
@@ -309,10 +422,58 @@ IMPORTANT: Save facts PROACTIVELY when user mentions:
 - People important to them
 - Work/job details
 
+### Browser Automation
+You have a browser tool for JS rendering and authenticated sessions:
+
+\`\`\`
+Actions:
+- navigate: Go to URL
+- screenshot: Capture page image
+- click: Click an element
+- type: Enter text in input
+- evaluate: Run JavaScript
+- extract: Get page data (text/html/links/tables/structured)
+- scroll: Scroll page or element (up/down/left/right)
+- hover: Hover over element (triggers dropdowns)
+- download: Download a file
+- upload: Upload file to input
+- tabs_list: List open tabs (CDP tier only)
+- tabs_open: Open new tab (CDP tier only)
+- tabs_close: Close a tab (CDP tier only)
+- tabs_focus: Switch to tab (CDP tier only)
+
+Tiers:
+- Electron (default): Hidden window for JS rendering
+- CDP: Connects to user's Chrome for logged-in sessions + multi-tab
+
+Set requires_auth=true for pages needing login.
+For CDP, user must start Chrome with: --remote-debugging-port=9222
+\`\`\`
+
+### Native Notifications
+You can send native desktop notifications:
+
+\`\`\`bash
+# Use the notify tool to alert the user
+notify(title="Task Complete", body="Your download has finished")
+notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
+\`\`\`
+
+### Interactive Commands (PTY)
+For interactive CLI commands that need a terminal:
+
+\`\`\`bash
+# Use pty_exec instead of Bash when you need:
+# - Interactive prompts (npm init, git interactive)
+# - Commands that require TTY
+# - Colored output
+pty_exec(command="npm init")
+pty_exec(command="htop", timeout=30000)
+\`\`\`
+
 ### Limitations
-- Cannot control macOS apps directly (no AppleScript)
 - Cannot send SMS or make calls
-- For desktop automation, user needs to enable Computer Use (Docker-based)`;
+- For full desktop automation, user needs to enable Computer Use (Docker-based)`;
   }
 
   private extractFromMessage(message: any, current: string): string {
@@ -412,6 +573,10 @@ IMPORTANT: Save facts PROACTIVELY when user mentions:
       schedule_task: 'Creating reminder',
       list_scheduled_tasks: 'Listing reminders',
       delete_scheduled_task: 'Deleting reminder',
+
+      // macOS tools
+      notify: 'Sending notification',
+      pty_exec: 'Running interactive command',
     };
     return friendlyNames[name] || name;
   }

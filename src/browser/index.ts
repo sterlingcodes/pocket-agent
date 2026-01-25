@@ -107,6 +107,13 @@ export class BrowserManager {
       waitFor: input.wait_for,
       tier: input.tier as BrowserTier,
       requiresAuth: input.requires_auth,
+      // New fields
+      scrollDirection: input.scroll_direction as BrowserAction['scrollDirection'],
+      scrollAmount: input.scroll_amount,
+      downloadPath: input.download_path,
+      downloadTimeout: input.download_timeout,
+      filePath: input.file_path,
+      tabId: input.tab_id,
     };
 
     return this.execute(action);
@@ -170,10 +177,28 @@ Use THIS tool when you need:
 - Screenshots of rendered pages
 - Clicking/typing on interactive elements
 - Access to user's logged-in browser sessions
+- File downloads/uploads
+- Multi-tab workflows (CDP tier only)
+
+Actions:
+- navigate: Go to URL
+- screenshot: Capture page image
+- click: Click an element
+- type: Enter text in input
+- evaluate: Run JavaScript
+- extract: Get page data (text/html/links/tables/structured)
+- scroll: Scroll page or element
+- hover: Hover over element (triggers dropdowns)
+- download: Download a file
+- upload: Upload file to input
+- tabs_list: List open tabs (CDP only)
+- tabs_open: Open new tab (CDP only)
+- tabs_close: Close a tab (CDP only)
+- tabs_focus: Switch to tab (CDP only)
 
 Tiers:
 - Electron (default): Hidden window for JS rendering
-- CDP: Connects to user's Chrome for logged-in sessions
+- CDP: Connects to user's Chrome for logged-in sessions + multi-tab
 
 Set requires_auth=true for pages needing login (uses CDP tier).
 For CDP, user must start Chrome with: --remote-debugging-port=9222`,
@@ -182,16 +207,31 @@ For CDP, user must start Chrome with: --remote-debugging-port=9222`,
       properties: {
         action: {
           type: 'string',
-          enum: ['navigate', 'screenshot', 'click', 'type', 'evaluate', 'extract'],
+          enum: [
+            'navigate',
+            'screenshot',
+            'click',
+            'type',
+            'evaluate',
+            'extract',
+            'scroll',
+            'hover',
+            'download',
+            'upload',
+            'tabs_list',
+            'tabs_open',
+            'tabs_close',
+            'tabs_focus',
+          ],
           description: 'The browser action to perform',
         },
         url: {
           type: 'string',
-          description: 'URL to navigate to (for navigate action)',
+          description: 'URL to navigate to (for navigate, tabs_open, download actions)',
         },
         selector: {
           type: 'string',
-          description: 'CSS selector for element (for click, type actions)',
+          description: 'CSS selector for element (for click, type, hover, scroll, download, upload)',
         },
         text: {
           type: 'string',
@@ -225,6 +265,31 @@ For CDP, user must start Chrome with: --remote-debugging-port=9222`,
         requires_auth: {
           type: 'boolean',
           description: 'Set true if page requires login (will use CDP tier)',
+        },
+        scroll_direction: {
+          type: 'string',
+          enum: ['up', 'down', 'left', 'right'],
+          description: 'Direction to scroll (default: down)',
+        },
+        scroll_amount: {
+          type: 'number',
+          description: 'Pixels to scroll (default: 300)',
+        },
+        download_path: {
+          type: 'string',
+          description: 'Path to save downloaded file',
+        },
+        download_timeout: {
+          type: 'number',
+          description: 'Max ms to wait for download (default: 30000)',
+        },
+        file_path: {
+          type: 'string',
+          description: 'Path to file to upload (for upload action)',
+        },
+        tab_id: {
+          type: 'string',
+          description: 'Tab ID for tabs_close, tabs_focus actions',
         },
       },
       required: ['action'],
@@ -261,6 +326,13 @@ export async function handleBrowserTool(input: unknown): Promise<string> {
     response.screenshot = `[base64 image, ${result.screenshot.length} chars]`;
     response.screenshot_base64 = result.screenshot;
   }
+  // New result fields
+  if (result.downloadedFile) {
+    response.downloadedFile = result.downloadedFile;
+    response.downloadSize = result.downloadSize;
+  }
+  if (result.tabs) response.tabs = result.tabs;
+  if (result.tabId) response.tabId = result.tabId;
 
   return JSON.stringify(response);
 }

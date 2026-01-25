@@ -1,16 +1,43 @@
 import cron, { ScheduledTask } from 'node-cron';
+import Database from 'better-sqlite3';
 import { AgentManager } from '../agent';
 import { MemoryManager, CronJob } from '../memory';
 import type { TelegramBot } from '../channels/telegram';
 
+interface CalendarEvent {
+  id: number;
+  title: string;
+  description: string | null;
+  start_time: string;
+  location: string | null;
+  reminder_minutes: number;
+  channel: string;
+}
+
+interface Task {
+  id: number;
+  title: string;
+  description: string | null;
+  due_date: string;
+  priority: string;
+  reminder_minutes: number;
+  channel: string;
+}
+
 export interface ScheduledJob {
   id: number;
   name: string;
-  schedule: string;
+  scheduleType?: 'cron' | 'at' | 'every';
+  schedule: string | null;
+  runAt?: string | null;
+  intervalMs?: number | null;
   prompt: string;
   channel: string;
-  recipient?: string; // Chat ID for telegram, etc.
+  recipient?: string;
   enabled: boolean;
+  deleteAfterRun?: boolean;
+  contextMessages?: number;
+  nextRunAt?: string | null;
 }
 
 export interface JobResult {
@@ -36,15 +63,18 @@ export class CronScheduler {
   private jobHistory: JobResult[] = [];
   private maxHistorySize: number = 100;
   private reloadInterval: ReturnType<typeof setInterval> | null = null;
+  private reminderInterval: ReturnType<typeof setInterval> | null = null;
   private lastJobCount: number = 0;
+  private dbPath: string | null = null;
 
   constructor() {}
 
   /**
    * Initialize scheduler with memory manager and load jobs
    */
-  async initialize(memory: MemoryManager): Promise<void> {
+  async initialize(memory: MemoryManager, dbPath?: string): Promise<void> {
     this.memory = memory;
+    this.dbPath = dbPath || null;
     await this.loadJobsFromDatabase();
     this.lastJobCount = this.jobs.size;
     console.log(`[Scheduler] Initialized with ${this.jobs.size} jobs`);
@@ -53,6 +83,14 @@ export class CronScheduler {
     this.reloadInterval = setInterval(() => {
       this.checkForNewJobs();
     }, 60000);
+
+    // Start periodic check for calendar/task reminders (every 30 seconds)
+    this.reminderInterval = setInterval(() => {
+      this.checkReminders();
+    }, 30000);
+
+    // Run initial reminder check
+    this.checkReminders();
   }
 
   /**
@@ -73,6 +111,288 @@ export class CronScheduler {
   }
 
   /**
+   * Check for calendar events and tasks that need reminders
+   */
+  private async checkReminders(): Promise<void> {
+    if (!this.dbPath) return;
+
+    try {
+      const db = new Database(this.dbPath);
+      const now = new Date();
+
+      // Check calendar events
+      const events = db.prepare(`
+        SELECT id, title, description, start_time, location, reminder_minutes, channel
+        FROM calendar_events
+        WHERE reminded = 0
+          AND datetime(start_time, '-' || reminder_minutes || ' minutes') <= datetime(?)
+          AND datetime(start_time) > datetime(?)
+      `).all(now.toISOString(), now.toISOString()) as CalendarEvent[];
+
+      for (const event of events) {
+        const startTime = new Date(event.start_time);
+        const minutesUntil = Math.round((startTime.getTime() - now.getTime()) / 60000);
+
+        let message = `Upcoming event: "${event.title}"`;
+        if (minutesUntil > 0) {
+          message += ` in ${minutesUntil} minute${minutesUntil === 1 ? '' : 's'}`;
+        } else {
+          message += ' starting now';
+        }
+        if (event.location) {
+          message += ` at ${event.location}`;
+        }
+
+        await this.sendReminder('calendar', event.title, message, event.channel);
+
+        // Mark as reminded
+        db.prepare('UPDATE calendar_events SET reminded = 1 WHERE id = ?').run(event.id);
+      }
+
+      // Check tasks with due dates
+      const tasks = db.prepare(`
+        SELECT id, title, description, due_date, priority, reminder_minutes, channel
+        FROM tasks
+        WHERE status != 'completed'
+          AND reminded = 0
+          AND reminder_minutes IS NOT NULL
+          AND datetime(due_date, '-' || reminder_minutes || ' minutes') <= datetime(?)
+          AND datetime(due_date) > datetime(?)
+      `).all(now.toISOString(), now.toISOString()) as Task[];
+
+      for (const task of tasks) {
+        const dueDate = new Date(task.due_date);
+        const minutesUntil = Math.round((dueDate.getTime() - now.getTime()) / 60000);
+
+        let message = `Task due soon: "${task.title}"`;
+        if (minutesUntil > 0) {
+          message += ` in ${minutesUntil} minute${minutesUntil === 1 ? '' : 's'}`;
+        } else {
+          message += ' due now';
+        }
+        if (task.priority === 'high') {
+          message += ' (High Priority)';
+        }
+
+        await this.sendReminder('task', task.title, message, task.channel);
+
+        // Mark as reminded
+        db.prepare('UPDATE tasks SET reminded = 1 WHERE id = ?').run(task.id);
+      }
+
+      // Check for due cron jobs
+      await this.checkDueJobs(db, now);
+
+      db.close();
+    } catch (error) {
+      console.error('[Scheduler] Reminder check failed:', error);
+    }
+  }
+
+  /**
+   * Check for cron jobs that are due to run
+   */
+  private async checkDueJobs(db: Database.Database, now: Date): Promise<void> {
+    interface DueJob {
+      id: number;
+      name: string;
+      schedule_type: string;
+      schedule: string | null;
+      run_at: string | null;
+      interval_ms: number | null;
+      prompt: string;
+      channel: string;
+      delete_after_run: number;
+      context_messages: number;
+    }
+
+    const dueJobs = db.prepare(`
+      SELECT id, name, schedule_type, schedule, run_at, interval_ms, prompt, channel, delete_after_run, context_messages
+      FROM cron_jobs
+      WHERE enabled = 1 AND next_run_at IS NOT NULL AND datetime(next_run_at) <= datetime(?)
+    `).all(now.toISOString()) as DueJob[];
+
+    for (const job of dueJobs) {
+      const startTime = Date.now();
+
+      try {
+        console.log(`[Scheduler] Executing job: ${job.name}`);
+
+        // Get context messages if requested
+        let contextText = '';
+        if (job.context_messages > 0 && this.memory) {
+          const history = this.memory.getRecentMessages(job.context_messages);
+          if (history.length > 0) {
+            const lines = history.map(m => {
+              const role = m.role === 'user' ? 'User' : 'Assistant';
+              const text = m.content.length > 200 ? m.content.slice(0, 200) + '...' : m.content;
+              return `- ${role}: ${text}`;
+            });
+            contextText = '\n\nRecent context:\n' + lines.join('\n');
+          }
+        }
+
+        const fullPrompt = job.prompt + contextText;
+
+        // Execute through agent
+        if (!AgentManager.isInitialized()) {
+          throw new Error('AgentManager not initialized');
+        }
+
+        const result = await AgentManager.processMessage(
+          `[Scheduled: ${job.name}] ${fullPrompt}`,
+          `cron:${job.name}`
+        );
+
+        const duration = Date.now() - startTime;
+
+        // Update job state
+        const nextRunAt = this.calculateNextRun(job.schedule_type, job.schedule, job.interval_ms);
+
+        if (job.delete_after_run === 1) {
+          // Delete one-time job
+          db.prepare('DELETE FROM cron_jobs WHERE id = ?').run(job.id);
+          console.log(`[Scheduler] Deleted one-time job: ${job.name}`);
+        } else {
+          // Update state
+          db.prepare(`
+            UPDATE cron_jobs SET
+              last_run_at = datetime(?),
+              last_status = 'ok',
+              last_error = NULL,
+              last_duration_ms = ?,
+              next_run_at = ?,
+              updated_at = datetime('now')
+            WHERE id = ?
+          `).run(now.toISOString(), duration, nextRunAt, job.id);
+        }
+
+        // Route response
+        await this.routeJobResponse(job.name, job.prompt, result.response, job.channel);
+
+        this.addToHistory({
+          jobName: job.name,
+          response: result.response,
+          channel: job.channel,
+          success: true,
+          timestamp: now,
+        });
+
+      } catch (error) {
+        const duration = Date.now() - startTime;
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+
+        console.error(`[Scheduler] Job ${job.name} failed:`, errorMsg);
+
+        // Update state with error
+        const nextRunAt = this.calculateNextRun(job.schedule_type, job.schedule, job.interval_ms);
+        db.prepare(`
+          UPDATE cron_jobs SET
+            last_run_at = datetime(?),
+            last_status = 'error',
+            last_error = ?,
+            last_duration_ms = ?,
+            next_run_at = ?,
+            updated_at = datetime('now')
+          WHERE id = ?
+        `).run(now.toISOString(), errorMsg, duration, nextRunAt, job.id);
+
+        this.addToHistory({
+          jobName: job.name,
+          response: '',
+          channel: job.channel,
+          success: false,
+          error: errorMsg,
+          timestamp: now,
+        });
+      }
+    }
+  }
+
+  /**
+   * Calculate next run time based on schedule type
+   */
+  private calculateNextRun(type: string, schedule: string | null, intervalMs: number | null): string | null {
+    const now = new Date();
+
+    if (type === 'at') {
+      // One-time job, no next run
+      return null;
+    }
+
+    if (type === 'every' && intervalMs) {
+      return new Date(now.getTime() + intervalMs).toISOString();
+    }
+
+    if (type === 'cron' && schedule) {
+      // Simple next cron calculation
+      const parts = schedule.split(/\s+/);
+      if (parts.length !== 5) return null;
+
+      const [min, hour] = parts;
+      const next = new Date(now);
+      next.setSeconds(0, 0);
+
+      if (min !== '*') next.setMinutes(parseInt(min, 10));
+      if (hour !== '*') next.setHours(parseInt(hour, 10));
+
+      if (next <= now) {
+        next.setDate(next.getDate() + 1);
+      }
+
+      return next.toISOString();
+    }
+
+    return null;
+  }
+
+  /**
+   * Route job response to appropriate channel
+   */
+  private async routeJobResponse(jobName: string, prompt: string, response: string, channel: string): Promise<void> {
+    if (channel === 'telegram' && this.telegramBot) {
+      await this.telegramBot.broadcast(`📅 ${jobName}\n\n${response}`);
+    } else {
+      // Desktop: notification + chat
+      const plainResponse = this.stripMarkdown(response);
+      if (this.onNotification) {
+        this.onNotification('Pocket Agent', plainResponse.slice(0, 200));
+      }
+      if (this.onChatMessage) {
+        this.onChatMessage(jobName, prompt, response);
+      }
+    }
+  }
+
+  /**
+   * Send a reminder notification
+   */
+  private async sendReminder(type: 'calendar' | 'task', title: string, message: string, channel: string): Promise<void> {
+    console.log(`[Scheduler] Sending ${type} reminder: ${title}`);
+
+    if (channel === 'telegram' && this.telegramBot) {
+      await this.telegramBot.broadcast(`${type === 'calendar' ? '📅' : '✓'} ${message}`);
+    } else {
+      // Desktop notification + chat
+      if (this.onNotification) {
+        this.onNotification('Pocket Agent', message);
+      }
+      if (this.onChatMessage) {
+        this.onChatMessage(`${type}_reminder`, message, message);
+      }
+    }
+
+    // Log to history
+    this.addToHistory({
+      jobName: `${type}:${title}`,
+      response: message,
+      channel,
+      success: true,
+      timestamp: new Date(),
+    });
+  }
+
+  /**
    * Set Telegram bot for routing messages
    */
   setTelegramBot(bot: TelegramBot): void {
@@ -82,6 +402,8 @@ export class CronScheduler {
 
   /**
    * Load all enabled jobs from database and schedule them
+   * Note: Only 'cron' type jobs are scheduled with node-cron.
+   * 'at' and 'every' jobs are handled by checkDueJobs() timer.
    */
   async loadJobsFromDatabase(): Promise<void> {
     if (!this.memory) {
@@ -89,16 +411,30 @@ export class CronScheduler {
       return;
     }
 
-    // Stop all existing tasks
-    this.stopAll();
+    // Stop all existing cron tasks (but not the reminder interval)
+    for (const [name, task] of this.tasks) {
+      task.stop();
+      console.log(`[Scheduler] Stopped: ${name}`);
+    }
+    this.tasks.clear();
+    this.jobs.clear();
 
     // Load jobs from SQLite
     const dbJobs = this.memory.getCronJobs(true); // enabled only
+    let cronJobCount = 0;
 
     for (const dbJob of dbJobs) {
+      // Only schedule 'cron' type jobs with node-cron
+      // 'at' and 'every' jobs are handled by the timer in checkDueJobs()
+      const scheduleType = dbJob.schedule_type || 'cron';
+      if (scheduleType !== 'cron' || !dbJob.schedule) {
+        continue;
+      }
+
       const job: ScheduledJob = {
         id: dbJob.id,
         name: dbJob.name,
+        scheduleType: 'cron',
         schedule: dbJob.schedule,
         prompt: dbJob.prompt,
         channel: dbJob.channel,
@@ -106,10 +442,12 @@ export class CronScheduler {
         enabled: dbJob.enabled,
       };
 
-      this.scheduleJob(job);
+      if (this.scheduleJob(job)) {
+        cronJobCount++;
+      }
     }
 
-    console.log(`[Scheduler] Loaded ${dbJobs.length} jobs from database`);
+    console.log(`[Scheduler] Loaded ${dbJobs.length} jobs (${cronJobCount} cron, ${dbJobs.length - cronJobCount} timer-based)`);
   }
 
   /**
@@ -362,6 +700,12 @@ export class CronScheduler {
     if (this.reloadInterval) {
       clearInterval(this.reloadInterval);
       this.reloadInterval = null;
+    }
+
+    // Stop reminder interval
+    if (this.reminderInterval) {
+      clearInterval(this.reminderInterval);
+      this.reminderInterval = null;
     }
 
     for (const [name, task] of this.tasks) {

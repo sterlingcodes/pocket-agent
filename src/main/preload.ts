@@ -4,6 +4,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('pocketAgent', {
   // Chat
   send: (message: string) => ipcRenderer.invoke('agent:send', message),
+  stop: () => ipcRenderer.invoke('agent:stop'),
   onStatus: (callback: (status: { type: string; toolName?: string; toolInput?: string; message?: string }) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, status: any) => callback(status);
     ipcRenderer.on('agent:status', listener);
@@ -60,6 +61,7 @@ declare global {
   interface Window {
     pocketAgent: {
       send: (message: string) => Promise<{ success: boolean; response?: string; error?: string; tokensUsed?: number }>;
+      stop: () => Promise<{ success: boolean }>;
       onStatus: (callback: (status: { type: string; toolName?: string; toolInput?: string; message?: string }) => void) => () => void;
       saveAttachment: (name: string, dataUrl: string) => Promise<string>;
       onSchedulerMessage: (callback: (data: { jobName: string; prompt: string; response: string }) => void) => () => void;

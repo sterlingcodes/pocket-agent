@@ -5,15 +5,23 @@
  * - File/Terminal: Built-in with claude_code preset
  * - Browser: Three-tier system (HTTP, Electron, CDP)
  * - Desktop: Anthropic computer use tool (Docker recommended)
+ *
+ * Custom tools use SDK MCP servers (in-process) via createSdkMcpServer()
  */
 
 import { getBrowserToolDefinition, handleBrowserTool } from '../browser';
-import { getMemoryTools, setMemoryManager } from './memory-tools';
+import { getMemoryTools } from './memory-tools';
 import { getSchedulerTools } from './scheduler-tools';
-import { MemoryManager } from '../memory';
+import {
+  getNotifyToolDefinition,
+  handleNotifyTool,
+  getPtyExecToolDefinition,
+  handlePtyExecTool,
+} from './macos';
 
 export { setMemoryManager } from './memory-tools';
 export { getSchedulerTools } from './scheduler-tools';
+export { showNotification, execWithPty } from './macos';
 
 export interface MCPServerConfig {
   command: string;
@@ -53,20 +61,24 @@ export function getDefaultToolsConfig(): ToolsConfig {
 }
 
 /**
- * Build MCP server configurations
+ * Build MCP server configurations (for child process MCP servers)
  */
 export function buildMCPServers(config: ToolsConfig): Record<string, MCPServerConfig> {
   const servers: Record<string, MCPServerConfig> = {};
 
-  // Computer use server (for desktop automation)
+  // Computer use server (for desktop automation) - runs as child process
   if (config.computerUse.enabled) {
     if (config.computerUse.dockerized) {
       servers['computer'] = {
         command: 'docker',
         args: [
-          'run', '-i', '--rm',
-          '-e', `DISPLAY_WIDTH=${config.computerUse.displaySize?.width || 1920}`,
-          '-e', `DISPLAY_HEIGHT=${config.computerUse.displaySize?.height || 1080}`,
+          'run',
+          '-i',
+          '--rm',
+          '-e',
+          `DISPLAY_WIDTH=${config.computerUse.displaySize?.width || 1920}`,
+          '-e',
+          `DISPLAY_HEIGHT=${config.computerUse.displaySize?.height || 1080}`,
           'ghcr.io/anthropics/anthropic-quickstarts:computer-use-demo-latest',
         ],
       };
@@ -80,6 +92,167 @@ export function buildMCPServers(config: ToolsConfig): Record<string, MCPServerCo
 
   // Merge with any custom servers
   return { ...servers, ...config.mcpServers };
+}
+
+/**
+ * Build SDK MCP servers (in-process tools)
+ * These run in the same process as the agent, so they can access Electron APIs
+ */
+export async function buildSdkMcpServers(
+  config: ToolsConfig
+): Promise<Record<string, unknown> | null> {
+  // Dynamically import SDK to avoid CommonJS issues
+  // Using Function constructor for dynamic ESM imports in CommonJS context
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dynamicImport = new Function('specifier', 'return import(specifier)') as <T = any>(
+    specifier: string
+  ) => Promise<T>;
+
+  try {
+    const sdk = await dynamicImport<typeof import('@anthropic-ai/claude-agent-sdk')>('@anthropic-ai/claude-agent-sdk');
+    const { createSdkMcpServer, tool } = sdk;
+    const zodModule = await dynamicImport<typeof import('zod')>('zod');
+    const { z } = zodModule;
+
+    const tools = [];
+
+    // Browser tool (if enabled)
+    if (config.browser.enabled) {
+      const browserTool = tool(
+        'browser',
+        getBrowserToolDefinition().description,
+        {
+          action: z.enum([
+            'navigate',
+            'screenshot',
+            'click',
+            'type',
+            'evaluate',
+            'extract',
+            'scroll',
+            'hover',
+            'download',
+            'upload',
+            'tabs_list',
+            'tabs_open',
+            'tabs_close',
+            'tabs_focus',
+          ]),
+          url: z.string().optional(),
+          selector: z.string().optional(),
+          text: z.string().optional(),
+          script: z.string().optional(),
+          extract_type: z.enum(['text', 'html', 'links', 'tables', 'structured']).optional(),
+          scroll_direction: z.enum(['up', 'down', 'left', 'right']).optional(),
+          scroll_amount: z.number().optional(),
+          download_path: z.string().optional(),
+          file_path: z.string().optional(),
+          tab_id: z.string().optional(),
+          requires_auth: z.boolean().optional(),
+          tier: z.enum(['electron', 'cdp']).optional(),
+          wait_for: z.union([z.string(), z.number()]).optional(),
+        },
+        async (args) => {
+          const result = await handleBrowserTool(args);
+          return { content: [{ type: 'text', text: result }] };
+        }
+      );
+      tools.push(browserTool);
+    }
+
+    // Notify tool
+    const notifyTool = tool(
+      'notify',
+      getNotifyToolDefinition().description,
+      {
+        title: z.string(),
+        body: z.string().optional(),
+        subtitle: z.string().optional(),
+        silent: z.boolean().optional(),
+        urgency: z.enum(['low', 'normal', 'critical']).optional(),
+      },
+      async (args) => {
+        const result = await handleNotifyTool(args);
+        return { content: [{ type: 'text', text: result }] };
+      }
+    );
+    tools.push(notifyTool);
+
+    // PTY exec tool
+    const ptyExecTool = tool(
+      'pty_exec',
+      getPtyExecToolDefinition().description,
+      {
+        command: z.string(),
+        args: z.array(z.string()).optional(),
+        cwd: z.string().optional(),
+        timeout: z.number().optional(),
+      },
+      async (args) => {
+        const result = await handlePtyExecTool(args);
+        return { content: [{ type: 'text', text: result }] };
+      }
+    );
+    tools.push(ptyExecTool);
+
+    // Memory tools
+    const memoryTools = getMemoryTools();
+    for (const memTool of memoryTools) {
+      const sdkTool = tool(
+        memTool.name,
+        memTool.description,
+        // Convert JSON schema to Zod (simplified - assumes string fields)
+        Object.fromEntries(
+          Object.entries(memTool.input_schema.properties || {}).map(([key, value]: [string, unknown]) => {
+            const prop = value as { type?: string };
+            if (prop.type === 'string') return [key, z.string().optional()];
+            if (prop.type === 'number') return [key, z.number().optional()];
+            return [key, z.any().optional()];
+          })
+        ),
+        async (args) => {
+          const result = await memTool.handler(args);
+          return { content: [{ type: 'text', text: result }] };
+        }
+      );
+      tools.push(sdkTool);
+    }
+
+    // Scheduler tools
+    const schedulerTools = getSchedulerTools();
+    for (const schedTool of schedulerTools) {
+      const sdkTool = tool(
+        schedTool.name,
+        schedTool.description,
+        Object.fromEntries(
+          Object.entries(schedTool.input_schema.properties || {}).map(([key, value]: [string, unknown]) => {
+            const prop = value as { type?: string };
+            if (prop.type === 'string') return [key, z.string().optional()];
+            if (prop.type === 'number') return [key, z.number().optional()];
+            if (prop.type === 'boolean') return [key, z.boolean().optional()];
+            return [key, z.any().optional()];
+          })
+        ),
+        async (args) => {
+          const result = await schedTool.handler(args);
+          return { content: [{ type: 'text', text: result }] };
+        }
+      );
+      tools.push(sdkTool);
+    }
+
+    // Create the SDK MCP server
+    const server = createSdkMcpServer({
+      name: 'pocket-agent-tools',
+      version: '1.0.0',
+      tools,
+    });
+
+    return { 'pocket-agent': server };
+  } catch (error) {
+    console.error('[Tools] Failed to build SDK MCP servers:', error);
+    return null;
+  }
 }
 
 /**
@@ -142,6 +315,23 @@ export function getCustomTools(config: ToolsConfig): Array<{
       handler: tool.handler,
     });
   }
+
+  // macOS tools (notifications and PTY exec)
+  const notifyDef = getNotifyToolDefinition();
+  tools.push({
+    name: notifyDef.name,
+    description: notifyDef.description,
+    input_schema: notifyDef.input_schema as Record<string, unknown>,
+    handler: handleNotifyTool,
+  });
+
+  const ptyExecDef = getPtyExecToolDefinition();
+  tools.push({
+    name: ptyExecDef.name,
+    description: ptyExecDef.description,
+    input_schema: ptyExecDef.input_schema as Record<string, unknown>,
+    handler: handlePtyExecTool,
+  });
 
   return tools;
 }

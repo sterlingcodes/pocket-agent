@@ -5,12 +5,16 @@
  * Runs invisibly, doesn't interrupt user.
  */
 
-import { BrowserWindow, WebContents } from 'electron';
+import { BrowserWindow, WebContents, app } from 'electron';
 import { BrowserAction, BrowserResult } from './types';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export class ElectronTier {
   private window: BrowserWindow | null = null;
   private currentUrl: string = '';
+  private downloadPath: string = app.getPath('downloads');
+  private lastDownload: { path: string; size: number } | null = null;
 
   /**
    * Initialize hidden browser window
@@ -35,6 +39,21 @@ export class ElectronTier {
     // Prevent window from showing
     this.window.on('show', () => {
       this.window?.hide();
+    });
+
+    // Set up download handling
+    this.window.webContents.session.on('will-download', (_event, item) => {
+      const savePath = path.join(this.downloadPath, item.getFilename());
+      item.setSavePath(savePath);
+
+      item.on('done', (_e, state) => {
+        if (state === 'completed') {
+          this.lastDownload = {
+            path: savePath,
+            size: item.getReceivedBytes(),
+          };
+        }
+      });
     });
 
     return this.window;
@@ -360,6 +379,303 @@ export class ElectronTier {
   }
 
   /**
+   * Scroll the page
+   */
+  async scroll(
+    direction: 'up' | 'down' | 'left' | 'right' = 'down',
+    amount: number = 300,
+    selector?: string
+  ): Promise<BrowserResult> {
+    try {
+      const webContents = await this.getWebContents();
+
+      const result = await webContents.executeJavaScript(`
+        (function() {
+          const target = ${selector ? `document.querySelector(${JSON.stringify(selector)})` : 'window'};
+          if (${selector ? 'true' : 'false'} && !target) {
+            return { success: false, error: 'Element not found' };
+          }
+
+          const scrollTarget = target === window ? window : target;
+          const direction = ${JSON.stringify(direction)};
+          const amount = ${amount};
+
+          switch (direction) {
+            case 'up':
+              scrollTarget.scrollBy(0, -amount);
+              break;
+            case 'down':
+              scrollTarget.scrollBy(0, amount);
+              break;
+            case 'left':
+              scrollTarget.scrollBy(-amount, 0);
+              break;
+            case 'right':
+              scrollTarget.scrollBy(amount, 0);
+              break;
+          }
+
+          return {
+            success: true,
+            scrollY: window.scrollY,
+            scrollX: window.scrollX,
+            scrollHeight: document.documentElement.scrollHeight,
+            scrollWidth: document.documentElement.scrollWidth
+          };
+        })()
+      `);
+
+      if (!result.success) {
+        return {
+          success: false,
+          tier: 'electron',
+          error: result.error || 'Scroll failed',
+        };
+      }
+
+      return {
+        success: true,
+        tier: 'electron',
+        url: this.currentUrl,
+        data: result,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'electron',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Hover over an element
+   */
+  async hover(selector: string): Promise<BrowserResult> {
+    try {
+      const webContents = await this.getWebContents();
+
+      const result = await webContents.executeJavaScript(`
+        (function() {
+          const el = document.querySelector(${JSON.stringify(selector)});
+          if (!el) return { success: false, error: 'Element not found' };
+
+          // Dispatch mouse events to trigger hover states
+          const rect = el.getBoundingClientRect();
+          const centerX = rect.left + rect.width / 2;
+          const centerY = rect.top + rect.height / 2;
+
+          const mouseEnter = new MouseEvent('mouseenter', {
+            bubbles: true,
+            clientX: centerX,
+            clientY: centerY
+          });
+          const mouseOver = new MouseEvent('mouseover', {
+            bubbles: true,
+            clientX: centerX,
+            clientY: centerY
+          });
+
+          el.dispatchEvent(mouseEnter);
+          el.dispatchEvent(mouseOver);
+
+          return { success: true };
+        })()
+      `);
+
+      if (!result.success) {
+        return {
+          success: false,
+          tier: 'electron',
+          error: result.error || 'Hover failed',
+        };
+      }
+
+      // Wait a bit for hover effects
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      return {
+        success: true,
+        tier: 'electron',
+        url: this.currentUrl,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'electron',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Trigger a download and wait for it
+   */
+  async download(
+    selector?: string,
+    url?: string,
+    savePath?: string,
+    timeout: number = 30000
+  ): Promise<BrowserResult> {
+    try {
+      const webContents = await this.getWebContents();
+
+      if (savePath) {
+        this.downloadPath = path.dirname(savePath);
+      }
+
+      this.lastDownload = null;
+
+      // Trigger download via click or direct navigation
+      if (selector) {
+        await webContents.executeJavaScript(`
+          document.querySelector(${JSON.stringify(selector)})?.click()
+        `);
+      } else if (url) {
+        await webContents.downloadURL(url);
+      } else {
+        return {
+          success: false,
+          tier: 'electron',
+          error: 'Either selector or url required for download',
+        };
+      }
+
+      // Wait for download to complete
+      const startTime = Date.now();
+      while (!this.lastDownload && Date.now() - startTime < timeout) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      if (!this.lastDownload) {
+        return {
+          success: false,
+          tier: 'electron',
+          error: 'Download timed out',
+        };
+      }
+
+      return {
+        success: true,
+        tier: 'electron',
+        url: this.currentUrl,
+        downloadedFile: this.lastDownload.path,
+        downloadSize: this.lastDownload.size,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'electron',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Upload a file to an input element
+   */
+  async upload(selector: string, filePath: string): Promise<BrowserResult> {
+    try {
+      // Verify file exists
+      if (!fs.existsSync(filePath)) {
+        return {
+          success: false,
+          tier: 'electron',
+          error: `File not found: ${filePath}`,
+        };
+      }
+
+      const webContents = await this.getWebContents();
+
+      // Check if element is a file input
+      const isFileInput = await webContents.executeJavaScript(`
+        (function() {
+          const el = document.querySelector(${JSON.stringify(selector)});
+          if (!el) return { error: 'Element not found' };
+          if (el.tagName !== 'INPUT' || el.type !== 'file') {
+            return { error: 'Element is not a file input' };
+          }
+          return { ok: true };
+        })()
+      `);
+
+      if (isFileInput.error) {
+        return {
+          success: false,
+          tier: 'electron',
+          error: isFileInput.error,
+        };
+      }
+
+      // Use Electron's file input mechanism
+      // Note: In Electron, we need to use webContents.send and preload
+      // For now, we'll use a workaround with executeJavaScript
+      const fileName = path.basename(filePath);
+      const fileContent = fs.readFileSync(filePath);
+      const base64 = fileContent.toString('base64');
+      const mimeType = this.getMimeType(filePath);
+
+      await webContents.executeJavaScript(`
+        (function() {
+          const input = document.querySelector(${JSON.stringify(selector)});
+          const dataUrl = 'data:${mimeType};base64,${base64}';
+
+          // Convert base64 to File
+          fetch(dataUrl)
+            .then(res => res.blob())
+            .then(blob => {
+              const file = new File([blob], ${JSON.stringify(fileName)}, { type: '${mimeType}' });
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              input.files = dt.files;
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+        })()
+      `);
+
+      // Wait for upload to process
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      return {
+        success: true,
+        tier: 'electron',
+        url: this.currentUrl,
+        data: { fileName, size: fileContent.length },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'electron',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Get MIME type from file extension
+   */
+  private getMimeType(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.pdf': 'application/pdf',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.txt': 'text/plain',
+      '.html': 'text/html',
+      '.json': 'application/json',
+      '.xml': 'application/xml',
+      '.zip': 'application/zip',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xls': 'application/vnd.ms-excel',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+  }
+
+  /**
    * Execute action
    */
   async execute(action: BrowserAction): Promise<BrowserResult> {
@@ -393,6 +709,44 @@ export class ElectronTier {
 
       case 'extract':
         return this.extract(action);
+
+      case 'scroll':
+        return this.scroll(
+          action.scrollDirection || 'down',
+          action.scrollAmount || 300,
+          action.selector
+        );
+
+      case 'hover':
+        if (!action.selector) {
+          return { success: false, tier: 'electron', error: 'Selector required' };
+        }
+        return this.hover(action.selector);
+
+      case 'download':
+        return this.download(
+          action.selector,
+          action.url,
+          action.downloadPath,
+          action.downloadTimeout
+        );
+
+      case 'upload':
+        if (!action.selector || !action.filePath) {
+          return { success: false, tier: 'electron', error: 'Selector and filePath required' };
+        }
+        return this.upload(action.selector, action.filePath);
+
+      // Tab management not supported in single-window Electron tier
+      case 'tabs_list':
+      case 'tabs_open':
+      case 'tabs_close':
+      case 'tabs_focus':
+        return {
+          success: false,
+          tier: 'electron',
+          error: 'Tab management requires CDP tier. Set requires_auth=true or tier="cdp"',
+        };
 
       default:
         return {

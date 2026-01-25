@@ -410,6 +410,11 @@ function setupIPC(): void {
     return { success: true };
   });
 
+  ipcMain.handle('agent:stop', async () => {
+    const stopped = AgentManager.stopQuery();
+    return { success: stopped };
+  });
+
   // Facts
   ipcMain.handle('facts:list', async () => {
     return AgentManager.getAllFacts();

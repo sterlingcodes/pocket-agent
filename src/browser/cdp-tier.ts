@@ -7,14 +7,18 @@
 
 import puppeteer, { Browser, Page } from 'puppeteer-core';
 import { BrowserAction, BrowserResult } from './types';
+import * as path from 'path';
+import * as fs from 'fs';
 
 const DEFAULT_CDP_URL = 'http://localhost:9222';
 
 export class CdpTier {
   private browser: Browser | null = null;
   private page: Page | null = null;
+  private pages: Map<string, Page> = new Map(); // Track all pages by ID
   private currentUrl: string = '';
   private cdpUrl: string;
+  private downloadPath: string = process.cwd();
 
   constructor(cdpUrl: string = DEFAULT_CDP_URL) {
     this.cdpUrl = cdpUrl;
@@ -322,6 +326,402 @@ export class CdpTier {
   }
 
   /**
+   * Scroll the page
+   */
+  async scroll(
+    direction: 'up' | 'down' | 'left' | 'right' = 'down',
+    amount: number = 300,
+    selector?: string
+  ): Promise<BrowserResult> {
+    try {
+      const page = await this.ensurePage();
+
+      if (selector) {
+        // Scroll element into view first
+        await page.waitForSelector(selector, { timeout: 5000 });
+      }
+
+      const result = await page.evaluate(
+        (dir: string, amt: number, sel: string | null) => {
+          const target = sel ? document.querySelector(sel) : window;
+          if (sel && !target) {
+            return { success: false, error: 'Element not found' };
+          }
+
+          const scrollTarget = target === window ? window : (target as Element);
+
+          switch (dir) {
+            case 'up':
+              scrollTarget.scrollBy(0, -amt);
+              break;
+            case 'down':
+              scrollTarget.scrollBy(0, amt);
+              break;
+            case 'left':
+              scrollTarget.scrollBy(-amt, 0);
+              break;
+            case 'right':
+              scrollTarget.scrollBy(amt, 0);
+              break;
+          }
+
+          return {
+            success: true,
+            scrollY: window.scrollY,
+            scrollX: window.scrollX,
+            scrollHeight: document.documentElement.scrollHeight,
+            scrollWidth: document.documentElement.scrollWidth,
+          };
+        },
+        direction,
+        amount,
+        selector || null
+      );
+
+      if (!result.success) {
+        return {
+          success: false,
+          tier: 'cdp',
+          error: result.error || 'Scroll failed',
+        };
+      }
+
+      return {
+        success: true,
+        tier: 'cdp',
+        url: page.url(),
+        data: result,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'cdp',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Hover over an element
+   */
+  async hover(selector: string): Promise<BrowserResult> {
+    try {
+      const page = await this.ensurePage();
+
+      await page.waitForSelector(selector, { timeout: 5000 });
+      await page.hover(selector);
+
+      // Wait for hover effects
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      return {
+        success: true,
+        tier: 'cdp',
+        url: page.url(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'cdp',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Trigger and wait for a download
+   */
+  async download(
+    selector?: string,
+    url?: string,
+    savePath?: string,
+    timeout: number = 30000
+  ): Promise<BrowserResult> {
+    try {
+      const page = await this.ensurePage();
+
+      // Set download behavior via CDP
+      const client = await page.createCDPSession();
+      const downloadDir = savePath ? path.dirname(savePath) : this.downloadPath;
+
+      await client.send('Page.setDownloadBehavior', {
+        behavior: 'allow',
+        downloadPath: downloadDir,
+      });
+
+      // Set up download listener
+      const downloadPromise = new Promise<{ path: string; size: number }>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Download timed out'));
+        }, timeout);
+
+        // Use CDP to track download
+        client.on('Page.downloadWillBegin', (event) => {
+          console.log('[CDP] Download starting:', event.suggestedFilename);
+        });
+
+        client.on('Page.downloadProgress', (event) => {
+          if (event.state === 'completed') {
+            clearTimeout(timeoutId);
+            const filePath = path.join(downloadDir, event.guid || 'download');
+            resolve({ path: filePath, size: event.totalBytes || 0 });
+          } else if (event.state === 'canceled') {
+            clearTimeout(timeoutId);
+            reject(new Error('Download was canceled'));
+          }
+        });
+      });
+
+      // Trigger download
+      if (selector) {
+        await page.waitForSelector(selector, { timeout: 5000 });
+        await page.click(selector);
+      } else if (url) {
+        await page.goto(url);
+      } else {
+        return {
+          success: false,
+          tier: 'cdp',
+          error: 'Either selector or url required for download',
+        };
+      }
+
+      try {
+        const result = await downloadPromise;
+        return {
+          success: true,
+          tier: 'cdp',
+          url: page.url(),
+          downloadedFile: result.path,
+          downloadSize: result.size,
+        };
+      } catch (e) {
+        return {
+          success: false,
+          tier: 'cdp',
+          error: e instanceof Error ? e.message : 'Download failed',
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'cdp',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Upload a file to an input element
+   */
+  async upload(selector: string, filePath: string): Promise<BrowserResult> {
+    try {
+      if (!fs.existsSync(filePath)) {
+        return {
+          success: false,
+          tier: 'cdp',
+          error: `File not found: ${filePath}`,
+        };
+      }
+
+      const page = await this.ensurePage();
+
+      await page.waitForSelector(selector, { timeout: 5000 });
+
+      // Get the file input element
+      const inputElement = await page.$(selector);
+      if (!inputElement) {
+        return {
+          success: false,
+          tier: 'cdp',
+          error: 'Element not found',
+        };
+      }
+
+      // Upload file using Puppeteer's uploadFile
+      // Cast to input element handle for uploadFile
+      const inputHandle = inputElement as unknown as import('puppeteer-core').ElementHandle<HTMLInputElement>;
+      await inputHandle.uploadFile(filePath);
+
+      const stats = fs.statSync(filePath);
+
+      return {
+        success: true,
+        tier: 'cdp',
+        url: page.url(),
+        data: {
+          fileName: path.basename(filePath),
+          size: stats.size,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'cdp',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * List all open tabs
+   */
+  async tabsList(): Promise<BrowserResult> {
+    try {
+      if (!this.browser?.connected) {
+        const result = await this.connect();
+        if (!result.success) {
+          return result;
+        }
+      }
+
+      const pages = await this.browser!.pages();
+      const tabs = await Promise.all(
+        pages.map(async (page, index) => {
+          const url = page.url();
+          const title = await page.title().catch(() => '');
+          const id = `tab-${index}`;
+
+          // Track pages
+          this.pages.set(id, page);
+
+          return {
+            id,
+            url,
+            title,
+            active: page === this.page,
+          };
+        })
+      );
+
+      return {
+        success: true,
+        tier: 'cdp',
+        tabs,
+        url: this.currentUrl,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'cdp',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Open a new tab
+   */
+  async tabsOpen(url?: string): Promise<BrowserResult> {
+    try {
+      if (!this.browser?.connected) {
+        const result = await this.connect();
+        if (!result.success) {
+          return result;
+        }
+      }
+
+      const newPage = await this.browser!.newPage();
+      const pages = await this.browser!.pages();
+      const tabId = `tab-${pages.length - 1}`;
+
+      this.pages.set(tabId, newPage);
+      this.page = newPage;
+
+      if (url) {
+        await newPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        this.currentUrl = newPage.url();
+      }
+
+      return {
+        success: true,
+        tier: 'cdp',
+        tabId,
+        url: newPage.url(),
+        title: await newPage.title().catch(() => ''),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'cdp',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Close a tab
+   */
+  async tabsClose(tabId: string): Promise<BrowserResult> {
+    try {
+      const page = this.pages.get(tabId);
+      if (!page) {
+        return {
+          success: false,
+          tier: 'cdp',
+          error: `Tab not found: ${tabId}`,
+        };
+      }
+
+      await page.close();
+      this.pages.delete(tabId);
+
+      // If we closed the active tab, switch to another
+      if (page === this.page) {
+        const pages = await this.browser!.pages();
+        this.page = pages[0] || null;
+        this.currentUrl = this.page?.url() || '';
+      }
+
+      return {
+        success: true,
+        tier: 'cdp',
+        url: this.currentUrl,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'cdp',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Focus/switch to a tab
+   */
+  async tabsFocus(tabId: string): Promise<BrowserResult> {
+    try {
+      const page = this.pages.get(tabId);
+      if (!page) {
+        return {
+          success: false,
+          tier: 'cdp',
+          error: `Tab not found: ${tabId}`,
+        };
+      }
+
+      await page.bringToFront();
+      this.page = page;
+      this.currentUrl = page.url();
+
+      return {
+        success: true,
+        tier: 'cdp',
+        tabId,
+        url: this.currentUrl,
+        title: await page.title().catch(() => ''),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        tier: 'cdp',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
    * Execute action
    */
   async execute(action: BrowserAction): Promise<BrowserResult> {
@@ -355,6 +755,51 @@ export class CdpTier {
 
       case 'extract':
         return this.extract(action);
+
+      case 'scroll':
+        return this.scroll(
+          action.scrollDirection || 'down',
+          action.scrollAmount || 300,
+          action.selector
+        );
+
+      case 'hover':
+        if (!action.selector) {
+          return { success: false, tier: 'cdp', error: 'Selector required' };
+        }
+        return this.hover(action.selector);
+
+      case 'download':
+        return this.download(
+          action.selector,
+          action.url,
+          action.downloadPath,
+          action.downloadTimeout
+        );
+
+      case 'upload':
+        if (!action.selector || !action.filePath) {
+          return { success: false, tier: 'cdp', error: 'Selector and filePath required' };
+        }
+        return this.upload(action.selector, action.filePath);
+
+      case 'tabs_list':
+        return this.tabsList();
+
+      case 'tabs_open':
+        return this.tabsOpen(action.url);
+
+      case 'tabs_close':
+        if (!action.tabId) {
+          return { success: false, tier: 'cdp', error: 'tabId required' };
+        }
+        return this.tabsClose(action.tabId);
+
+      case 'tabs_focus':
+        if (!action.tabId) {
+          return { success: false, tier: 'cdp', error: 'tabId required' };
+        }
+        return this.tabsFocus(action.tabId);
 
       default:
         return {

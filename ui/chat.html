@@ -304,12 +304,25 @@
     }
 
     .message a {
-      color: var(--accent);
-      text-decoration: none;
+      color: #60a5fa;
+      text-decoration: underline;
+      text-decoration-color: rgba(96, 165, 250, 0.4);
+      text-underline-offset: 2px;
     }
 
     .message a:hover {
-      text-decoration: underline;
+      color: #93c5fd;
+      text-decoration-color: rgba(147, 197, 253, 0.6);
+    }
+
+    .message.user a {
+      color: #bfdbfe;
+      text-decoration-color: rgba(191, 219, 254, 0.4);
+    }
+
+    .message.user a:hover {
+      color: #ffffff;
+      text-decoration-color: rgba(255, 255, 255, 0.6);
     }
 
     .message hr {
@@ -538,6 +551,14 @@
       height: 18px;
     }
 
+    #send-btn.stop-btn {
+      background: var(--error);
+    }
+
+    #send-btn.stop-btn:hover {
+      background: #dc2626;
+    }
+
     /* Empty State */
     .empty-state {
       flex: 1;
@@ -737,10 +758,13 @@
         onkeydown="handleKeydown(event)"
       ></textarea>
     </div>
-    <button id="send-btn" onclick="sendMessage()" title="Send message">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <button id="send-btn" onclick="handleSendClick()" title="Send message">
+      <svg class="send-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="22" y1="2" x2="11" y2="13"/>
         <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+      </svg>
+      <svg class="stop-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="6" y="6" width="12" height="12" rx="2"/>
       </svg>
     </button>
   </div>
@@ -895,6 +919,59 @@
       }
     }
 
+    function handleSendClick() {
+      if (isLoading) {
+        stopQuery();
+      } else {
+        sendMessage();
+      }
+    }
+
+    function setButtonState(loading) {
+      const sendIcon = sendBtn.querySelector('.send-icon');
+      const stopIcon = sendBtn.querySelector('.stop-icon');
+
+      if (loading) {
+        sendBtn.classList.add('stop-btn');
+        sendBtn.title = 'Stop';
+        sendIcon.style.display = 'none';
+        stopIcon.style.display = 'block';
+        sendBtn.disabled = false;
+      } else {
+        sendBtn.classList.remove('stop-btn');
+        sendBtn.title = 'Send message';
+        sendIcon.style.display = 'block';
+        stopIcon.style.display = 'none';
+      }
+    }
+
+    async function stopQuery() {
+      try {
+        await window.pocketAgent.stop();
+
+        // Clean up status listener
+        if (statusCleanup) {
+          statusCleanup();
+          statusCleanup = null;
+        }
+
+        // Remove status indicator
+        if (currentStatusEl) {
+          currentStatusEl.remove();
+          currentStatusEl = null;
+        }
+
+        addMessage('system', 'Query stopped.');
+
+        isLoading = false;
+        setButtonState(false);
+        scrollToBottom();
+        input.focus();
+      } catch (err) {
+        console.error('Failed to stop query:', err);
+      }
+    }
+
     async function sendMessage() {
       const message = input.value.trim();
       const attachments = [...pendingAttachments];
@@ -906,7 +983,7 @@
       if (emptyState) emptyState.remove();
 
       isLoading = true;
-      sendBtn.disabled = true;
+      setButtonState(true);
       input.value = '';
       input.style.height = 'auto';
 
@@ -960,11 +1037,14 @@
           currentStatusEl = null;
         }
 
-        addMessage('error', err.message || 'Something went wrong');
+        // Don't show error if query was stopped
+        if (!err.message?.includes('stopped')) {
+          addMessage('error', err.message || 'Something went wrong');
+        }
       }
 
       isLoading = false;
-      sendBtn.disabled = false;
+      setButtonState(false);
       scrollToBottom();
       input.focus();
     }

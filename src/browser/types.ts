@@ -4,8 +4,24 @@
 
 export type BrowserTier = 'electron' | 'cdp';
 
+export type BrowserActionType =
+  | 'navigate'
+  | 'screenshot'
+  | 'click'
+  | 'type'
+  | 'evaluate'
+  | 'extract'
+  | 'scroll'
+  | 'hover'
+  | 'download'
+  | 'upload'
+  | 'tabs_list'
+  | 'tabs_open'
+  | 'tabs_close'
+  | 'tabs_focus';
+
 export interface BrowserAction {
-  action: 'navigate' | 'screenshot' | 'click' | 'type' | 'evaluate' | 'extract';
+  action: BrowserActionType;
   url?: string;
   selector?: string;
   text?: string;
@@ -15,6 +31,16 @@ export interface BrowserAction {
   waitFor?: string | number; // selector or ms
   tier?: BrowserTier; // Force a specific tier
   requiresAuth?: boolean; // Hint that auth is needed (triggers CDP)
+  // Scroll options
+  scrollDirection?: 'up' | 'down' | 'left' | 'right';
+  scrollAmount?: number; // pixels
+  // Download options
+  downloadPath?: string; // where to save
+  downloadTimeout?: number; // ms to wait for download
+  // Upload options
+  filePath?: string; // file to upload
+  // Tab options
+  tabId?: string; // for tabs_close, tabs_focus
 }
 
 export interface BrowserResult {
@@ -27,6 +53,12 @@ export interface BrowserResult {
   error?: string;
   url?: string;
   title?: string;
+  // Download result
+  downloadedFile?: string;
+  downloadSize?: number;
+  // Tab results
+  tabs?: Array<{ id: string; url: string; title: string; active: boolean }>;
+  tabId?: string;
 }
 
 export interface ExtractedData {
@@ -55,4 +87,11 @@ export interface BrowserToolInput {
   wait_for?: string | number;
   tier?: string;
   requires_auth?: boolean;
+  // New fields
+  scroll_direction?: string;
+  scroll_amount?: number;
+  download_path?: string;
+  download_timeout?: number;
+  file_path?: string;
+  tab_id?: string;
 }
