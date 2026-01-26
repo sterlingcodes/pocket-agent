@@ -12,6 +12,8 @@
 import { getBrowserToolDefinition, handleBrowserTool } from '../browser';
 import { getMemoryTools } from './memory-tools';
 import { getSchedulerTools } from './scheduler-tools';
+import { getCalendarTools } from './calendar-tools';
+import { getTaskTools } from './task-tools';
 import {
   getNotifyToolDefinition,
   handleNotifyTool,
@@ -21,6 +23,8 @@ import {
 
 export { setMemoryManager } from './memory-tools';
 export { getSchedulerTools } from './scheduler-tools';
+export { getCalendarTools } from './calendar-tools';
+export { getTaskTools } from './task-tools';
 export { showNotification, execWithPty } from './macos';
 
 export interface MCPServerConfig {
@@ -241,6 +245,50 @@ export async function buildSdkMcpServers(
       tools.push(sdkTool);
     }
 
+    // Calendar tools
+    const calendarTools = getCalendarTools();
+    for (const calTool of calendarTools) {
+      const sdkTool = tool(
+        calTool.name,
+        calTool.description,
+        Object.fromEntries(
+          Object.entries(calTool.input_schema.properties || {}).map(([key, value]: [string, unknown]) => {
+            const prop = value as { type?: string };
+            if (prop.type === 'string') return [key, z.string().optional()];
+            if (prop.type === 'number') return [key, z.number().optional()];
+            return [key, z.any().optional()];
+          })
+        ),
+        async (args) => {
+          const result = await calTool.handler(args);
+          return { content: [{ type: 'text', text: result }] };
+        }
+      );
+      tools.push(sdkTool);
+    }
+
+    // Task tools
+    const taskTools = getTaskTools();
+    for (const taskTool of taskTools) {
+      const sdkTool = tool(
+        taskTool.name,
+        taskTool.description,
+        Object.fromEntries(
+          Object.entries(taskTool.input_schema.properties || {}).map(([key, value]: [string, unknown]) => {
+            const prop = value as { type?: string };
+            if (prop.type === 'string') return [key, z.string().optional()];
+            if (prop.type === 'number') return [key, z.number().optional()];
+            return [key, z.any().optional()];
+          })
+        ),
+        async (args) => {
+          const result = await taskTool.handler(args);
+          return { content: [{ type: 'text', text: result }] };
+        }
+      );
+      tools.push(sdkTool);
+    }
+
     // Create the SDK MCP server
     const server = createSdkMcpServer({
       name: 'pocket-agent-tools',
@@ -332,6 +380,28 @@ export function getCustomTools(config: ToolsConfig): Array<{
     input_schema: ptyExecDef.input_schema as Record<string, unknown>,
     handler: handlePtyExecTool,
   });
+
+  // Calendar tools
+  const calendarTools = getCalendarTools();
+  for (const tool of calendarTools) {
+    tools.push({
+      name: tool.name,
+      description: tool.description,
+      input_schema: tool.input_schema as Record<string, unknown>,
+      handler: tool.handler,
+    });
+  }
+
+  // Task tools
+  const taskTools = getTaskTools();
+  for (const tool of taskTools) {
+    tools.push({
+      name: tool.name,
+      description: tool.description,
+      input_schema: tool.input_schema as Record<string, unknown>,
+      handler: tool.handler,
+    });
+  }
 
   return tools;
 }

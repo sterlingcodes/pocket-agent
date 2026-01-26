@@ -3,6 +3,7 @@ import { MemoryManager, Message } from '../memory';
 import { buildMCPServers, buildSdkMcpServers, setMemoryManager, ToolsConfig, validateToolsConfig } from '../tools';
 import { closeBrowserManager } from '../browser';
 import { loadIdentity } from '../config/identity';
+import { loadInstructions } from '../config/instructions';
 import { EventEmitter } from 'events';
 
 // Token limits
@@ -69,6 +70,7 @@ class AgentManagerClass extends EventEmitter {
   private toolsConfig: ToolsConfig | null = null;
   private initialized: boolean = false;
   private identity: string = '';
+  private instructions: string = '';
   private currentAbortController: AbortController | null = null;
   private isProcessing: boolean = false;
 
@@ -91,6 +93,7 @@ class AgentManagerClass extends EventEmitter {
     this.initialized = true;
 
     this.identity = loadIdentity();
+    this.instructions = loadInstructions();
     this.memory.setSummarizer(this.createSummary.bind(this));
     setMemoryManager(this.memory);
 
@@ -98,6 +101,7 @@ class AgentManagerClass extends EventEmitter {
     console.log('[AgentManager] Project root:', this.projectRoot);
     console.log('[AgentManager] Model:', this.model);
     console.log('[AgentManager] Identity loaded:', this.identity.length, 'chars');
+    console.log('[AgentManager] Instructions loaded:', this.instructions.length, 'chars');
 
     if (this.toolsConfig) {
       const validation = validateToolsConfig(this.toolsConfig);
@@ -237,6 +241,10 @@ class AgentManagerClass extends EventEmitter {
   private async buildOptions(factsContext: string): Promise<SDKOptions> {
     const appendParts: string[] = [];
 
+    if (this.instructions) {
+      appendParts.push(this.instructions);
+    }
+
     if (this.identity) {
       appendParts.push(this.identity);
     }
@@ -273,6 +281,17 @@ class AgentManagerClass extends EventEmitter {
         'mcp__pocket-agent__schedule_task',
         'mcp__pocket-agent__list_scheduled_tasks',
         'mcp__pocket-agent__delete_scheduled_task',
+        // Custom MCP tools - calendar
+        'mcp__pocket-agent__calendar_add',
+        'mcp__pocket-agent__calendar_list',
+        'mcp__pocket-agent__calendar_upcoming',
+        'mcp__pocket-agent__calendar_delete',
+        // Custom MCP tools - tasks
+        'mcp__pocket-agent__task_add',
+        'mcp__pocket-agent__task_list',
+        'mcp__pocket-agent__task_complete',
+        'mcp__pocket-agent__task_delete',
+        'mcp__pocket-agent__task_due',
       ],
       persistSession: false,
     };

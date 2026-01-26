@@ -5,6 +5,9 @@ import { ToolsConfig, getDefaultToolsConfig } from '../tools';
 // Re-export identity functions
 export { loadIdentity, saveIdentity, getIdentityPath } from './identity';
 
+// Re-export instructions functions (internal CLAUDE.md)
+export { loadInstructions, saveInstructions, getInstructionsPath } from './instructions';
+
 export interface AnthropicConfig {
   apiKey: string;
   model?: string;
