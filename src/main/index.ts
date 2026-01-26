@@ -1306,7 +1306,9 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async () => {
-  globalShortcut.unregisterAll(); // Clean up global shortcuts
+  if (app.isReady()) {
+    globalShortcut.unregisterAll(); // Clean up global shortcuts
+  }
   await stopAgent();
   if (memory) {
     memory.close();
