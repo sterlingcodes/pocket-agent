@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
   <title>Settings - Pocket Agent</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -156,7 +156,7 @@
     .content {
       flex: 1;
       overflow-y: auto;
-      padding: 24px 24px 40px 24px;
+      padding: 20px 20px 32px 20px;
     }
 
     .content::-webkit-scrollbar {
@@ -187,47 +187,51 @@
     }
 
     .section-title {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
       letter-spacing: -0.02em;
     }
 
     .section-desc {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-muted);
-      margin-bottom: 24px;
+      margin-bottom: 16px;
     }
 
     /* Form Groups */
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 14px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
     }
 
     .form-group label {
       display: block;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       color: var(--text-secondary);
     }
 
     .form-group .description {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
-      margin-top: 4px;
+      margin-top: 3px;
     }
 
     .form-group input,
     .form-group select,
     .form-group textarea {
       width: 100%;
-      padding: 10px 14px;
+      padding: 8px 12px;
       background: var(--bg-tertiary);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text-primary);
-      font-size: 14px;
+      font-size: 13px;
       font-family: inherit;
       outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
@@ -264,12 +268,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .toggle-group:last-child {
-      border-bottom: none;
+      padding: 0;
     }
 
     .toggle-info {
@@ -277,21 +276,21 @@
     }
 
     .toggle-info .toggle-label {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
     }
 
     .toggle-info .toggle-desc {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
     }
 
     .toggle {
-      width: 44px;
-      height: 24px;
+      width: 40px;
+      height: 22px;
       background: var(--border);
-      border-radius: 12px;
+      border-radius: 11px;
       position: relative;
       cursor: pointer;
       transition: background 0.2s;
@@ -307,21 +306,21 @@
       position: absolute;
       top: 2px;
       left: 2px;
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       background: white;
       border-radius: 50%;
       transition: transform 0.2s;
     }
 
     .toggle.active::after {
-      transform: translateX(20px);
+      transform: translateX(18px);
     }
 
     /* Input with Button */
     .input-with-btn {
       display: flex;
-      gap: 8px;
+      gap: 6px;
     }
 
     .input-with-btn input {
@@ -329,12 +328,12 @@
     }
 
     .input-with-btn button {
-      padding: 10px 16px;
+      padding: 8px 12px;
       background: var(--bg-tertiary);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text-secondary);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       cursor: pointer;
       white-space: nowrap;
@@ -355,10 +354,10 @@
     .status {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      margin-top: 8px;
-      padding: 6px 10px;
+      gap: 5px;
+      font-size: 11px;
+      margin-top: 6px;
+      padding: 5px 8px;
       border-radius: var(--radius-sm);
     }
 
@@ -378,8 +377,8 @@
     }
 
     .status svg {
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
     }
 
     .status.info {
@@ -391,16 +390,16 @@
     .auth-status {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .auth-badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      border-radius: 20px;
-      font-size: 13px;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 12px;
       font-weight: 500;
     }
 
@@ -427,13 +426,13 @@
     .oauth-btn {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 10px 16px;
+      gap: 5px;
+      padding: 8px 14px;
       background: var(--orange);
       color: white;
       border: none;
-      border-radius: var(--radius);
-      font-size: 13px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.15s;
@@ -451,12 +450,12 @@
     }
 
     .logout-btn {
-      padding: 6px 12px;
+      padding: 5px 10px;
       background: var(--bg-tertiary);
       color: var(--text-secondary);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
       transition: all 0.15s;
     }
@@ -485,22 +484,26 @@
       background: var(--bg-secondary);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px;
-      margin-bottom: 20px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+
+    .card:last-child {
+      margin-bottom: 0;
     }
 
     .card-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
     }
 
     .card-title svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       color: var(--accent);
     }
 
@@ -509,18 +512,18 @@
       background: rgba(99, 102, 241, 0.1);
       border: 1px solid rgba(99, 102, 241, 0.2);
       border-radius: var(--radius-sm);
-      padding: 12px 14px;
-      font-size: 13px;
+      padding: 10px 12px;
+      font-size: 11px;
       color: var(--text-secondary);
-      margin-bottom: 20px;
+      margin-bottom: 12px;
       display: flex;
       align-items: flex-start;
-      gap: 10px;
+      gap: 8px;
     }
 
     .info-box svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       color: var(--accent);
       flex-shrink: 0;
       margin-top: 1px;
@@ -557,13 +560,13 @@
     }
 
     .skills-setup-btn {
-      margin-top: 10px;
-      padding: 10px 16px;
+      margin-top: 8px;
+      padding: 8px 14px;
       background: var(--bg-tertiary);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       color: var(--text-secondary);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.15s;
@@ -573,12 +576,212 @@
       background: var(--border);
       color: var(--text-primary);
     }
+
+    /* Compact API Keys Table */
+    .keys-table {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .key-row {
+      display: grid;
+      grid-template-columns: 140px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .key-row:last-child {
+      border-bottom: none;
+    }
+
+    .key-row:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .key-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .key-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .key-link {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .key-link:hover {
+      color: var(--accent);
+    }
+
+    .key-input {
+      display: flex;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .key-input input {
+      flex: 1;
+      min-width: 0;
+      padding: 6px 10px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 12px;
+      font-family: 'SF Mono', monospace;
+    }
+
+    .key-input input:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    .key-input input::placeholder {
+      color: var(--text-muted);
+      font-family: inherit;
+    }
+
+    .key-input button {
+      padding: 6px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .key-input button:hover {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
+    .key-status {
+      min-width: 70px;
+    }
+
+    .key-status .status {
+      margin: 0;
+      font-size: 10px;
+      padding: 3px 6px;
+    }
+
+    /* Compact Auth Boxes */
+    .auth-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+
+    .auth-box:last-child {
+      margin-bottom: 0;
+    }
+
+    .auth-current {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .auth-label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .auth-option-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .auth-option-title {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    /* Compact Settings Grid */
+    .settings-grid {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .setting-row:last-child {
+      border-bottom: none;
+    }
+
+    .setting-row:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .setting-row label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    .setting-row input,
+    .setting-row select {
+      width: 140px;
+      padding: 6px 10px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 12px;
+    }
+
+    .setting-row select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12' fill='%23636366'%3E%3Cpath d='M6 8L2 4h8L6 8z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      padding-right: 24px;
+    }
+
+    .setting-row input:focus,
+    .setting-row select:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
   </style>
 </head>
 <body>
   <header>
     <h1>Tweaks ⚙️</h1>
     <div class="header-actions">
+      <button class="secondary" onclick="window.close()">Done</button>
       <button class="secondary" onclick="restartAgent()">Reboot</button>
     </div>
   </header>
@@ -619,59 +822,44 @@
       <!-- Authentication Section -->
       <section id="auth" class="section active">
         <h2 class="section-title">Sign In</h2>
-        <p class="section-desc">Choose how to connect with Claude. You can use OAuth (Claude Pro/Max) or an API key.</p>
+        <p class="section-desc">Choose how to connect with Claude.</p>
 
-        <div class="card">
-          <div class="card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-            How You're Connected
-          </div>
-          <div class="form-group">
+        <div class="auth-box">
+          <div class="auth-current">
+            <span class="auth-label">Status</span>
             <div id="auth-status" class="auth-status">
               <span class="auth-badge loading">checking...</span>
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-title" style="color: var(--orange);">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-            Sign in (OAuth)
-          </div>
-          <p class="description" style="margin-bottom: 16px;">Use your Claude Pro or Max subscription. Recommended for personal use.</p>
-          <div id="oauth-section">
-            <button id="oauth-btn" class="oauth-btn" onclick="startOAuth()">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-              Sign in
-            </button>
-            <div id="oauth-code-section" style="display: none; margin-top: 16px;">
-              <div class="form-group">
-                <label>Authorization Code</label>
-                <div class="input-with-btn">
-                  <input type="text" id="oauth-code" placeholder="Paste the code from your browser...">
-                  <button onclick="completeOAuth()">Submit</button>
-                </div>
-                <div id="oauth-code-status"></div>
-                <p class="description">After signing in, copy the code and paste it here.</p>
+        <div class="auth-box">
+          <div class="auth-option">
+            <div class="auth-option-header">
+              <span class="auth-option-title" style="color: var(--orange);">🔑 OAuth (Pro/Max)</span>
+              <button id="oauth-btn" class="oauth-btn" onclick="startOAuth()">Sign in</button>
+            </div>
+            <div id="oauth-code-section" style="display: none; margin-top: 10px;">
+              <div class="key-input">
+                <input type="text" id="oauth-code" placeholder="Paste authorization code...">
+                <button onclick="completeOAuth()">Submit</button>
               </div>
+              <div id="oauth-code-status"></div>
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-title" style="color: var(--success);">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-            Use Your Own Key
-          </div>
-          <p class="description" style="margin-bottom: 16px;">Use an Anthropic API key. Best for development or pay-as-you-go usage.</p>
-          <div class="form-group">
-            <label>Anthropic API Key</label>
-            <div class="input-with-btn">
+        <div class="auth-box">
+          <div class="auth-option">
+            <div class="auth-option-header">
+              <span class="auth-option-title" style="color: var(--success);">🔐 API Key</span>
+              <a href="https://console.anthropic.com/settings/keys" target="_blank" class="key-link">Get key →</a>
+            </div>
+            <div class="key-input" style="margin-top: 8px;">
               <input type="password" id="auth-api-key" placeholder="sk-ant-...">
               <button onclick="saveApiKey()">Save</button>
             </div>
             <div id="api-key-status"></div>
-            <p class="description">Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color: var(--accent)">console.anthropic.com</a></p>
           </div>
         </div>
       </section>
@@ -681,100 +869,80 @@
         <h2 class="section-title">API Keys</h2>
         <p class="section-desc">Your secret keys are safely encrypted. Pinky promise! 🤞</p>
 
-        <div class="card">
-          <div class="card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-            Anthropic
-          </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <div class="input-with-btn">
+        <div class="keys-table">
+          <div class="key-row" id="anthropic-key-row">
+            <div class="key-info">
+              <span class="key-name">🧠 Anthropic</span>
+              <a href="https://console.anthropic.com/" target="_blank" class="key-link">console.anthropic.com</a>
+            </div>
+            <div class="key-input">
               <input type="password" id="anthropic.apiKey" placeholder="sk-ant-...">
-              <button onclick="validateKey('anthropic')">Validate</button>
+              <button onclick="validateKey('anthropic')">Test</button>
             </div>
-            <div id="anthropic-status"></div>
-            <p class="description">Get your API key from <a href="https://console.anthropic.com/" target="_blank" style="color: var(--accent)">console.anthropic.com</a></p>
+            <div id="anthropic-status" class="key-status"></div>
           </div>
-        </div>
 
-        <div class="card">
-          <div class="card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            OpenAI
-          </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <div class="input-with-btn">
+          <div class="key-row">
+            <div class="key-info">
+              <span class="key-name">🎨 OpenAI</span>
+              <a href="https://platform.openai.com/" target="_blank" class="key-link">platform.openai.com</a>
+            </div>
+            <div class="key-input">
               <input type="password" id="openai.apiKey" placeholder="sk-...">
-              <button onclick="validateKey('openai')">Validate</button>
+              <button onclick="validateKey('openai')">Test</button>
             </div>
-            <div id="openai-status"></div>
-            <p class="description">For embeddings, image gen & whisper. Get from <a href="https://platform.openai.com/" target="_blank" style="color: var(--accent)">platform.openai.com</a></p>
+            <div id="openai-status" class="key-status"></div>
           </div>
-        </div>
 
-        <div class="card">
-          <div class="card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-            Google Gemini
+          <div class="key-row">
+            <div class="key-info">
+              <span class="key-name">♊ Gemini</span>
+              <a href="https://aistudio.google.com/apikey" target="_blank" class="key-link">aistudio.google.com</a>
+            </div>
+            <div class="key-input">
+              <input type="password" id="gemini.apiKey" placeholder="AI...">
+            </div>
           </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <input type="password" id="gemini.apiKey" placeholder="AI...">
-            <p class="description">For Gemini skills. Get from <a href="https://aistudio.google.com/apikey" target="_blank" style="color: var(--accent)">aistudio.google.com</a></p>
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Google Places
+          <div class="key-row">
+            <div class="key-info">
+              <span class="key-name">📍 Google Places</span>
+              <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="key-link">cloud.google.com</a>
+            </div>
+            <div class="key-input">
+              <input type="password" id="google.placesApiKey" placeholder="AIza...">
+            </div>
           </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <input type="password" id="google.placesApiKey" placeholder="AIza...">
-            <p class="description">For location skills (goplaces). Get from <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: var(--accent)">Google Cloud Console</a></p>
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            Notion
+          <div class="key-row">
+            <div class="key-info">
+              <span class="key-name">📔 Notion</span>
+              <a href="https://www.notion.so/my-integrations" target="_blank" class="key-link">notion.so/integrations</a>
+            </div>
+            <div class="key-input">
+              <input type="password" id="notion.apiKey" placeholder="secret_...">
+            </div>
           </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <input type="password" id="notion.apiKey" placeholder="secret_...">
-            <p class="description">For Notion integration. Get from <a href="https://www.notion.so/my-integrations" target="_blank" style="color: var(--accent)">notion.so/my-integrations</a></p>
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
-            Trello
+          <div class="key-row">
+            <div class="key-info">
+              <span class="key-name">📋 Trello</span>
+              <a href="https://trello.com/power-ups/admin" target="_blank" class="key-link">trello.com/power-ups</a>
+            </div>
+            <div class="key-input">
+              <input type="password" id="trello.apiKey" placeholder="API Key">
+              <input type="password" id="trello.token" placeholder="Token" style="margin-left: 4px;">
+            </div>
           </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <input type="password" id="trello.apiKey" placeholder="Your Trello API key">
-            <p class="description">Get from <a href="https://trello.com/power-ups/admin" target="_blank" style="color: var(--accent)">trello.com/power-ups/admin</a></p>
-          </div>
-          <div class="form-group">
-            <label>Token</label>
-            <input type="password" id="trello.token" placeholder="Your Trello token">
-            <p class="description">Generate after creating API key</p>
-          </div>
-        </div>
 
-        <div class="card">
-          <div class="card-title">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            ElevenLabs
-          </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <input type="password" id="elevenlabs.apiKey" placeholder="Your ElevenLabs API key">
-            <p class="description">For TTS (sag skill). Get from <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" style="color: var(--accent)">elevenlabs.io</a></p>
+          <div class="key-row">
+            <div class="key-info">
+              <span class="key-name">🎙️ ElevenLabs</span>
+              <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" class="key-link">elevenlabs.io</a>
+            </div>
+            <div class="key-input">
+              <input type="password" id="elevenlabs.apiKey" placeholder="Your API key">
+            </div>
           </div>
         </div>
       </section>
@@ -782,40 +950,33 @@
       <!-- Agent Section -->
       <section id="agent" class="section">
         <h2 class="section-title">Brain Power</h2>
-        <p class="section-desc">Tune my thinking power and memory. More tokens = bigger brain!</p>
+        <p class="section-desc">Tune my thinking power and memory.</p>
 
-        <div class="card">
-          <div class="form-group">
+        <div class="settings-grid">
+          <div class="setting-row">
             <label>Model</label>
             <select id="agent.model">
-              <option value="claude-opus-4-5-20251101">Claude Opus 4.5 (Recommended)</option>
-              <option value="claude-sonnet-4-5-20250929">Claude Sonnet 4.5 (Balanced)</option>
-              <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (Fast)</option>
+              <option value="claude-opus-4-5-20251101">Opus 4.5</option>
+              <option value="claude-sonnet-4-5-20250929">Sonnet 4.5</option>
+              <option value="claude-haiku-4-5-20251001">Haiku 4.5</option>
             </select>
-            <p class="description">The Claude model to use for conversations</p>
           </div>
-
-          <div class="form-group">
-            <label>Compaction Threshold</label>
-            <input type="number" id="agent.compactionThreshold" placeholder="120000">
-            <p class="description">Token count at which to start summarizing older messages</p>
-          </div>
-
-          <div class="form-group">
-            <label>Max Context Tokens</label>
-            <input type="number" id="agent.maxContextTokens" placeholder="150000">
-            <p class="description">Maximum tokens in conversation context</p>
-          </div>
-
-          <div class="form-group">
-            <label>Thinking Level</label>
+          <div class="setting-row">
+            <label>Thinking</label>
             <select id="agent.thinkingLevel">
               <option value="none">None</option>
               <option value="minimal">Minimal</option>
               <option value="normal">Normal</option>
               <option value="extended">Extended</option>
             </select>
-            <p class="description">How much reasoning to show in responses</p>
+          </div>
+          <div class="setting-row">
+            <label>Compaction</label>
+            <input type="number" id="agent.compactionThreshold" placeholder="120000">
+          </div>
+          <div class="setting-row">
+            <label>Max Tokens</label>
+            <input type="number" id="agent.maxContextTokens" placeholder="150000">
           </div>
         </div>
       </section>
@@ -825,37 +986,32 @@
         <h2 class="section-title">Telegram</h2>
         <p class="section-desc">Chat with me from anywhere via Telegram!</p>
 
-        <div class="card">
-          <div class="toggle-group">
-            <div class="toggle-info">
-              <div class="toggle-label">Telegram Mode</div>
-              <div class="toggle-desc">Let me chat with you on Telegram</div>
-            </div>
+        <div class="settings-grid">
+          <div class="setting-row">
+            <label>Enable Telegram</label>
             <div class="toggle" id="telegram.enabled-toggle" onclick="toggleSetting('telegram.enabled')"></div>
           </div>
         </div>
 
-        <div class="card" id="telegram-config">
-          <div class="form-group">
-            <label>Bot Token</label>
-            <div class="input-with-btn">
-              <input type="password" id="telegram.botToken" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
-              <button onclick="validateKey('telegram')">Validate</button>
+        <div class="settings-grid" id="telegram-config" style="margin-top: 10px;">
+          <div class="setting-row" style="flex-direction: column; align-items: stretch; gap: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label>Bot Token</label>
+              <a href="https://t.me/BotFather" target="_blank" class="key-link">@BotFather →</a>
+            </div>
+            <div class="key-input">
+              <input type="password" id="telegram.botToken" placeholder="123456:ABC-DEF...">
+              <button onclick="validateKey('telegram')">Test</button>
             </div>
             <div id="telegram-status"></div>
-            <p class="description">Get from <a href="https://t.me/BotFather" target="_blank" style="color: var(--accent)">@BotFather</a> on Telegram</p>
           </div>
-
-          <div class="form-group">
-            <label>Allowed User IDs</label>
-            <input type="text" id="telegram.allowedUserIds" placeholder="123456789, 987654321">
-            <p class="description">Comma-separated Telegram user IDs who can use this bot</p>
+          <div class="setting-row">
+            <label>Allowed Users</label>
+            <input type="text" id="telegram.allowedUserIds" placeholder="123456789, ..." style="width: 180px;">
           </div>
-
-          <div class="form-group">
-            <label>Default Chat ID</label>
-            <input type="text" id="telegram.defaultChatId" placeholder="">
-            <p class="description">Chat ID for scheduled notifications (optional)</p>
+          <div class="setting-row">
+            <label>Default Chat</label>
+            <input type="text" id="telegram.defaultChatId" placeholder="Chat ID" style="width: 180px;">
           </div>
         </div>
       </section>
@@ -863,45 +1019,31 @@
       <!-- Memory Section -->
       <section id="memory" class="section">
         <h2 class="section-title">Memory & Search</h2>
-        <p class="section-desc">Fine-tune how I remember and find things. Nerd stuff!</p>
+        <p class="section-desc">Fine-tune how I remember and find things.</p>
 
-        <div class="info-box">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          <span>Hybrid search combines semantic (vector) similarity with keyword matching for best results.</span>
-        </div>
-
-        <div class="card">
-          <div class="form-group">
-            <label>Embedding Provider</label>
+        <div class="settings-grid">
+          <div class="setting-row">
+            <label>Embeddings</label>
             <select id="memory.embeddingProvider">
-              <option value="openai">OpenAI (text-embedding-3-small)</option>
-              <option value="none">None (keyword search only)</option>
+              <option value="openai">OpenAI</option>
+              <option value="none">None</option>
             </select>
-            <p class="description">Provider for generating semantic embeddings</p>
           </div>
-
-          <div class="form-group">
-            <label>Vector Search Weight</label>
+          <div class="setting-row">
+            <label>Vector Weight</label>
             <input type="number" id="memory.vectorWeight" step="0.1" min="0" max="1" placeholder="0.7">
-            <p class="description">Weight for semantic similarity in hybrid search (0-1)</p>
           </div>
-
-          <div class="form-group">
-            <label>Keyword Search Weight</label>
+          <div class="setting-row">
+            <label>Keyword Weight</label>
             <input type="number" id="memory.keywordWeight" step="0.1" min="0" max="1" placeholder="0.3">
-            <p class="description">Weight for keyword matching in hybrid search (0-1)</p>
           </div>
-
-          <div class="form-group">
-            <label>Minimum Score Threshold</label>
+          <div class="setting-row">
+            <label>Min Score</label>
             <input type="number" id="memory.minScoreThreshold" step="0.05" min="0" max="1" placeholder="0.35">
-            <p class="description">Minimum score for search results to be returned</p>
           </div>
-
-          <div class="form-group">
-            <label>Max Search Results</label>
+          <div class="setting-row">
+            <label>Max Results</label>
             <input type="number" id="memory.maxSearchResults" min="1" max="20" placeholder="6">
-            <p class="description">Maximum number of facts returned per search</p>
           </div>
         </div>
       </section>
@@ -909,23 +1051,19 @@
       <!-- Browser Section -->
       <section id="browser" class="section">
         <h2 class="section-title">Browser Magic</h2>
-        <p class="section-desc">Let me browse the web and do things in Chrome for you!</p>
+        <p class="section-desc">Let me browse the web and click around for you!</p>
 
-        <div class="card">
-          <div class="toggle-group">
-            <div class="toggle-info">
-              <div class="toggle-label">Browser Mode</div>
-              <div class="toggle-desc">Let me surf the web and click around for you</div>
-            </div>
+        <div class="settings-grid">
+          <div class="setting-row">
+            <label>Enable Browser</label>
             <div class="toggle" id="browser.enabled-toggle" onclick="toggleSetting('browser.enabled')"></div>
           </div>
         </div>
 
-        <div class="card" id="browser-config">
-          <div class="form-group">
-            <label>Chrome DevTools Protocol URL</label>
-            <input type="text" id="browser.cdpUrl" placeholder="http://localhost:9222">
-            <p class="description">URL for Chrome remote debugging. Start Chrome with --remote-debugging-port=9222</p>
+        <div class="settings-grid" id="browser-config" style="margin-top: 10px;">
+          <div class="setting-row">
+            <label>CDP URL</label>
+            <input type="text" id="browser.cdpUrl" placeholder="http://localhost:9222" style="width: 180px;">
           </div>
         </div>
       </section>
@@ -935,15 +1073,14 @@
         <h2 class="section-title">Superpowers</h2>
         <p class="section-desc">Unlock abilities like email, messaging, notes, and more!</p>
 
-        <div class="card">
-          <div class="form-group">
+        <div class="settings-grid">
+          <div class="setting-row">
             <label>Status</label>
-            <div id="skills-status-line" class="status info">checking powers...</div>
+            <div id="skills-status-line" class="status info" style="margin: 0;">checking...</div>
           </div>
-          <div class="form-group">
-            <label>Power Up</label>
-            <p class="description">Install dependencies and configure skills for email, messaging (iMessage, Slack, Discord), notes (Apple Notes, Obsidian, Notion), and more.</p>
-            <button onclick="openSkillsSetup()" class="skills-setup-btn">Open Skills Lab</button>
+          <div class="setting-row">
+            <label>Configure</label>
+            <button onclick="openSkillsSetup()" class="skills-setup-btn" style="margin: 0;">Open Skills Lab</button>
           </div>
         </div>
       </section>
@@ -1150,6 +1287,7 @@
       const authMethod = settings['auth.method'];
       const hasOAuth = settings['auth.oauthToken'];
       const hasApiKey = settings['anthropic.apiKey'];
+      const anthropicKeyRow = document.getElementById('anthropic-key-row');
 
       if (authMethod === 'oauth' && hasOAuth) {
         statusDiv.innerHTML = `
@@ -1159,6 +1297,10 @@
           </span>
           <button class="logout-btn" onclick="logout()">Sign Out</button>
         `;
+        // Hide Anthropic API key row when OAuth is active
+        if (anthropicKeyRow) {
+          anthropicKeyRow.style.display = 'none';
+        }
       } else if (hasApiKey) {
         statusDiv.innerHTML = `
           <span class="auth-badge api-key">
@@ -1167,6 +1309,10 @@
           </span>
           <button class="logout-btn" onclick="logout()">Clear</button>
         `;
+        // Show Anthropic API key row
+        if (anthropicKeyRow) {
+          anthropicKeyRow.style.display = 'grid';
+        }
       } else {
         statusDiv.innerHTML = `
           <span class="auth-badge none">
@@ -1174,6 +1320,10 @@
             Not Configured
           </span>
         `;
+        // Show Anthropic API key row
+        if (anthropicKeyRow) {
+          anthropicKeyRow.style.display = 'grid';
+        }
       }
     }
 
