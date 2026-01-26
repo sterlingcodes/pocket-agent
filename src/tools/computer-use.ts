@@ -5,8 +5,7 @@
  * Should be run in Docker container for safety.
  */
 
-import { execSync, spawn, ChildProcess } from 'child_process';
-import path from 'path';
+import { spawnSync, ChildProcess } from 'child_process';
 
 export interface ComputerAction {
   action: 'screenshot' | 'mouse_move' | 'left_click' | 'right_click' |
@@ -61,7 +60,10 @@ export class DockerComputerUse {
     ];
 
     try {
-      execSync(`docker ${args.join(' ')}`, { stdio: 'inherit' });
+      // Use spawnSync with array args to prevent shell injection
+      const result = spawnSync('docker', args, { stdio: 'inherit' });
+      if (result.error) throw result.error;
+      if (result.status !== 0) throw new Error(`docker exited with code ${result.status}`);
       console.log(`[ComputerUse] Container ${this.containerName} started`);
 
       // Wait for container to be ready
@@ -80,14 +82,18 @@ export class DockerComputerUse {
 
     while (Date.now() - startTime < timeout) {
       try {
-        execSync(`docker exec ${this.containerName} curl -s http://localhost:8080/health`, {
+        // Use spawnSync with array args to prevent shell injection
+        const result = spawnSync('docker', ['exec', this.containerName, 'curl', '-s', 'http://localhost:8080/health'], {
           stdio: 'ignore',
         });
-        console.log('[ComputerUse] Container ready');
-        return;
+        if (result.status === 0) {
+          console.log('[ComputerUse] Container ready');
+          return;
+        }
       } catch {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Ignore and retry
       }
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     throw new Error('Container failed to become ready');
@@ -98,12 +104,17 @@ export class DockerComputerUse {
    */
   async execute(action: ComputerAction): Promise<{ success: boolean; screenshot?: string; error?: string }> {
     try {
-      const result = execSync(
-        `docker exec ${this.containerName} curl -s -X POST http://localhost:8080/action -H "Content-Type: application/json" -d '${JSON.stringify(action)}'`,
-        { encoding: 'utf-8' }
-      );
+      // Use spawnSync with array args to prevent shell injection
+      const result = spawnSync('docker', [
+        'exec', this.containerName,
+        'curl', '-s', '-X', 'POST',
+        'http://localhost:8080/action',
+        '-H', 'Content-Type: application/json',
+        '-d', JSON.stringify(action)
+      ], { encoding: 'utf-8' });
 
-      const response = JSON.parse(result);
+      if (result.error) throw result.error;
+      const response = JSON.parse(result.stdout);
       return response;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -126,7 +137,8 @@ export class DockerComputerUse {
     if (!this.container && !this.containerName) return;
 
     try {
-      execSync(`docker stop ${this.containerName}`, { stdio: 'ignore' });
+      // Use spawnSync with array args to prevent shell injection
+      spawnSync('docker', ['stop', this.containerName], { stdio: 'ignore' });
       console.log(`[ComputerUse] Container ${this.containerName} stopped`);
     } catch (error) {
       console.error('[ComputerUse] Failed to stop container:', error);
@@ -140,10 +152,12 @@ export class DockerComputerUse {
    */
   isRunning(): boolean {
     try {
-      const result = execSync(`docker inspect -f '{{.State.Running}}' ${this.containerName}`, {
+      // Use spawnSync with array args to prevent shell injection
+      const result = spawnSync('docker', ['inspect', '-f', '{{.State.Running}}', this.containerName], {
         encoding: 'utf-8',
       });
-      return result.trim() === 'true';
+      if (result.error || result.status !== 0) return false;
+      return result.stdout.trim() === 'true';
     } catch {
       return false;
     }

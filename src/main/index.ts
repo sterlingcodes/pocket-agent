@@ -277,7 +277,7 @@ function buildCronSubmenu(): Electron.MenuItemConstructorOptions[] {
 
   const items: Electron.MenuItemConstructorOptions[] = jobs.map(job => ({
     label: `${job.enabled ? '✓' : '✗'} ${job.name}`,
-    sublabel: job.schedule,
+    sublabel: job.schedule ?? undefined,
     submenu: [
       {
         label: job.enabled ? 'Disable' : 'Enable',
@@ -998,7 +998,7 @@ async function restartAgent(): Promise<void> {
 app.whenReady().then(async () => {
   // Hide dock on macOS
   if (process.platform === 'darwin') {
-    app.dock.hide();
+    app.dock?.hide();
   }
 
   const userDataPath = app.getPath('userData');

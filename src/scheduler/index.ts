@@ -116,8 +116,8 @@ export class CronScheduler {
   private async checkReminders(): Promise<void> {
     if (!this.dbPath) return;
 
+    const db = new Database(this.dbPath);
     try {
-      const db = new Database(this.dbPath);
       const now = new Date();
 
       // Check calendar events
@@ -182,10 +182,10 @@ export class CronScheduler {
 
       // Check for due cron jobs
       await this.checkDueJobs(db, now);
-
-      db.close();
     } catch (error) {
       console.error('[Scheduler] Reminder check failed:', error);
+    } finally {
+      db.close();
     }
   }
 
@@ -462,7 +462,7 @@ export class CronScheduler {
    * Schedule a single job
    */
   scheduleJob(job: ScheduledJob): boolean {
-    if (!cron.validate(job.schedule)) {
+    if (!job.schedule || !cron.validate(job.schedule)) {
       console.error(`[Scheduler] Invalid cron expression for ${job.name}: ${job.schedule}`);
       return false;
     }
@@ -470,7 +470,8 @@ export class CronScheduler {
     // Stop existing task with same name
     this.stopJob(job.name);
 
-    const task = cron.schedule(job.schedule, async () => {
+    const schedule = job.schedule;
+    const task = cron.schedule(schedule, async () => {
       await this.executeJob(job);
     });
 

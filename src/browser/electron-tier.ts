@@ -555,12 +555,15 @@ export class ElectronTier {
         };
       }
 
+      // Type assertion needed: TypeScript doesn't track that lastDownload
+      // was set by the download event handler during the async wait
+      const download = this.lastDownload as { path: string; size: number };
       return {
         success: true,
         tier: 'electron',
         url: this.currentUrl,
-        downloadedFile: this.lastDownload.path,
-        downloadSize: this.lastDownload.size,
+        downloadedFile: download.path,
+        downloadSize: download.size,
       };
     } catch (error) {
       return {

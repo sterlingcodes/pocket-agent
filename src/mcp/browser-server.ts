@@ -245,13 +245,20 @@ async function handleNotify(args: Record<string, unknown>): Promise<string> {
   const title = args.title as string;
   const body = (args.body as string) || '';
 
+  // Escape AppleScript special characters to prevent command injection
+  const escapeAppleScript = (str: string): string => {
+    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  };
+
   try {
     // Try terminal-notifier first (brew install terminal-notifier)
     const result = await new Promise<string>((resolve) => {
       const child = spawn('terminal-notifier', ['-title', title, '-message', body, '-sound', 'default']);
       child.on('error', () => {
-        // Fall back to osascript
-        const osa = spawn('osascript', ['-e', `display notification "${body}" with title "${title}"`]);
+        // Fall back to osascript - use escaped strings to prevent injection
+        const safeBody = escapeAppleScript(body);
+        const safeTitle = escapeAppleScript(title);
+        const osa = spawn('osascript', ['-e', `display notification "${safeBody}" with title "${safeTitle}"`]);
         osa.on('close', () => resolve(JSON.stringify({ success: true, method: 'osascript' })));
         osa.on('error', () => resolve(JSON.stringify({ error: 'No notification method available' })));
       });

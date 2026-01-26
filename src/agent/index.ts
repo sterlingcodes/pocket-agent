@@ -156,7 +156,7 @@ class AgentManagerClass extends EventEmitter {
 
       if (context.messages.length > 0) {
         const historyText = context.messages
-          .map((m: Message) => `${m.role.toUpperCase()}: ${m.content}`)
+          .map(m => `${m.role.toUpperCase()}: ${m.content}`)
           .join('\n\n');
         contextParts.push(`Previous conversation:\n${historyText}`);
       }
