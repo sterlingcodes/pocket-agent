@@ -310,7 +310,9 @@ export class CronScheduler {
         }
 
         // Route response to the job's session
-        await this.routeJobResponse(job.name, job.prompt, response, job.channel, sessionId);
+        // For reminders, don't show prompt (the response IS the message)
+        const displayPrompt = job.job_type === 'reminder' ? '' : job.prompt;
+        await this.routeJobResponse(job.name, displayPrompt, response, job.channel, sessionId);
 
         this.addToHistory({
           jobName: job.name,
