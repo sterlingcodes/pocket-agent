@@ -22,6 +22,77 @@ function getTokenLimits(): { maxContextTokens: number; compactionThreshold: numb
   return { maxContextTokens, compactionThreshold };
 }
 
+// Provider configuration for different LLM backends
+type ProviderType = 'anthropic' | 'moonshot';
+
+interface ProviderConfig {
+  baseUrl?: string;
+  useAuthToken: boolean;  // Use ANTHROPIC_AUTH_TOKEN (Bearer) vs ANTHROPIC_API_KEY (x-api-key)
+}
+
+const PROVIDER_CONFIGS: Record<ProviderType, ProviderConfig> = {
+  'anthropic': {
+    // No baseUrl = uses default Anthropic endpoint
+    useAuthToken: false,
+  },
+  'moonshot': {
+    baseUrl: 'https://api.moonshot.ai/anthropic/',
+    useAuthToken: true,  // Moonshot uses Bearer token auth
+  },
+};
+
+// Model to provider mapping
+const MODEL_PROVIDERS: Record<string, ProviderType> = {
+  // Anthropic models
+  'claude-opus-4-5-20251101': 'anthropic',
+  'claude-sonnet-4-5-20250929': 'anthropic',
+  'claude-haiku-4-5-20251001': 'anthropic',
+  // Moonshot/Kimi models
+  'kimi-k2.5': 'moonshot',
+};
+
+/**
+ * Get the provider type for a model
+ */
+function getProviderForModel(model: string): ProviderType {
+  return MODEL_PROVIDERS[model] || 'anthropic';
+}
+
+/**
+ * Configure environment variables for the selected provider
+ * This is called before each SDK query to ensure correct routing
+ */
+function configureProviderEnvironment(model: string): void {
+  const provider = getProviderForModel(model);
+  const config = PROVIDER_CONFIGS[provider];
+
+  // Clear all provider-related env vars first
+  delete process.env.ANTHROPIC_BASE_URL;
+  delete process.env.ANTHROPIC_AUTH_TOKEN;
+  // Note: ANTHROPIC_API_KEY may be set by OAuth or settings, don't clear if using Anthropic
+
+  if (provider === 'moonshot') {
+    // Moonshot requires base URL and uses Bearer token auth
+    const moonshotKey = SettingsManager.get('moonshot.apiKey');
+    if (!moonshotKey) {
+      throw new Error('Moonshot API key not configured. Please add your key in Settings > Keys.');
+    }
+
+    process.env.ANTHROPIC_BASE_URL = config.baseUrl;
+    process.env.ANTHROPIC_AUTH_TOKEN = moonshotKey;
+    // Clear ANTHROPIC_API_KEY so SDK uses AUTH_TOKEN instead
+    process.env.ANTHROPIC_API_KEY = '';
+
+    console.log('[AgentManager] Provider configured: Moonshot (Kimi)');
+  } else {
+    // Anthropic provider - ensure no base URL override
+    delete process.env.ANTHROPIC_BASE_URL;
+    delete process.env.ANTHROPIC_AUTH_TOKEN;
+
+    console.log('[AgentManager] Provider configured: Anthropic');
+  }
+}
+
 // Get smart context options from settings
 function getSmartContextOptions(currentQuery?: string): SmartContextOptions {
   return {
@@ -339,6 +410,9 @@ class AgentManagerClass extends EventEmitter {
         : undefined;
 
       const options = await this.buildOptions(factsContext, soulContext, abortController, lastUserMessageTimestamp);
+
+      // Configure provider environment based on model (sets ANTHROPIC_BASE_URL, AUTH_TOKEN, etc.)
+      configureProviderEnvironment(this.model);
 
       console.log('[AgentManager] Calling query() with model:', options.model, 'thinking:', options.maxThinkingTokens || 'default');
       this.emitStatus({ type: 'thinking', message: 'hmm let me think 🤔' });

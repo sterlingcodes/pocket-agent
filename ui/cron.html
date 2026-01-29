@@ -902,13 +902,26 @@
       }
     }
 
+    // Parse timestamp from database (SQLite stores UTC without 'Z' suffix)
+    function parseDbTimestamp(timestamp) {
+      if (!timestamp) return new Date();
+      // Check if timestamp has an explicit timezone indicator
+      const hasTimezone = /Z$|[+-]\d{2}:?\d{2}$/.test(timestamp);
+      if (hasTimezone) {
+        return new Date(timestamp);
+      }
+      // No timezone - all DB timestamps are UTC, so add 'Z'
+      const normalized = timestamp.replace(' ', 'T');
+      return new Date(normalized + 'Z');
+    }
+
     // Convert job schedule to human-readable
     function scheduleToHuman(job) {
       const scheduleType = job.schedule_type || 'cron';
 
       // Handle 'at' type (one-time scheduled)
       if (scheduleType === 'at' && job.run_at) {
-        const runAt = new Date(job.run_at);
+        const runAt = parseDbTimestamp(job.run_at);
         const now = new Date();
         const isToday = runAt.toDateString() === now.toDateString();
         const tomorrow = new Date(now);

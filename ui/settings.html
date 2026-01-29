@@ -925,7 +925,7 @@
     <nav class="sidebar">
       <div class="nav-item active" data-section="auth">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><circle cx="8" cy="16" r="1"/><circle cx="16" cy="16" r="1"/></svg>
-        Claude
+        LLM
       </div>
       <div class="nav-item" data-section="api_keys">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
@@ -954,11 +954,12 @@
     </nav>
 
     <main class="content">
-      <!-- Claude Section -->
+      <!-- LLM Section -->
       <section id="auth" class="section active">
-        <h2 class="section-title">Claude</h2>
-        <p class="section-desc">Connect and configure your AI assistant.</p>
+        <h2 class="section-title">LLM</h2>
+        <p class="section-desc">Connect and configure your AI models.</p>
 
+        <h3 class="subsection-title" style="margin-top: 16px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">Anthropic (Claude)</h3>
         <div class="auth-box">
           <div class="auth-option">
             <div class="auth-option-header">
@@ -990,7 +991,22 @@
           </div>
         </div>
 
-        <div class="settings-grid" id="brain-power-section" style="margin-top: 16px;">
+        <h3 class="subsection-title" style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">Kimi (Moonshot)</h3>
+        <div class="keys-table" id="kimi-api-key-section">
+          <div class="key-row">
+            <div class="key-info">
+              <span class="key-name">API Key</span>
+              <a href="https://platform.moonshot.ai/" target="_blank" class="key-link">platform.moonshot.ai</a>
+            </div>
+            <div class="key-input">
+              <input type="password" id="moonshot.apiKey" placeholder="sk-...">
+              <button onclick="validateKey('moonshot')">Test</button>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="subsection-title" style="margin-top: 24px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text-secondary);">Model Settings</h3>
+        <div class="settings-grid" id="brain-power-section">
           <div class="setting-row">
             <label>Model</label>
             <select id="agent.model">
@@ -1278,9 +1294,73 @@
         populateFields();
         updateToggles();
         updateAuthStatus();
+        await refreshModelDropdown();
       } catch (err) {
         console.error('Failed to load settings:', err);
         showToast('Hmm, couldn\'t grab settings', 'error');
+      }
+    }
+
+    // Refresh model dropdown based on available API keys
+    async function refreshModelDropdown() {
+      try {
+        const models = await window.pocketAgent.getAvailableModels();
+        const dropdown = document.getElementById('agent.model');
+        const currentValue = dropdown.value;
+
+        // Clear existing options
+        dropdown.innerHTML = '';
+
+        if (models.length === 0) {
+          // No models available - show placeholder
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = 'Add API key to enable models';
+          option.disabled = true;
+          dropdown.appendChild(option);
+          return;
+        }
+
+        // Add available models grouped by provider
+        const anthropicModels = models.filter(m => m.provider === 'anthropic');
+        const moonshotModels = models.filter(m => m.provider === 'moonshot');
+
+        if (anthropicModels.length > 0) {
+          const group = document.createElement('optgroup');
+          group.label = 'Anthropic';
+          for (const model of anthropicModels) {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.name;
+            group.appendChild(option);
+          }
+          dropdown.appendChild(group);
+        }
+
+        if (moonshotModels.length > 0) {
+          const group = document.createElement('optgroup');
+          group.label = 'Kimi (Moonshot)';
+          for (const model of moonshotModels) {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.name;
+            group.appendChild(option);
+          }
+          dropdown.appendChild(group);
+        }
+
+        // Restore current selection if still valid
+        const isValidSelection = models.some(m => m.id === currentValue);
+        if (isValidSelection) {
+          dropdown.value = currentValue;
+        } else if (models.length > 0) {
+          // Default to first available model
+          dropdown.value = models[0].id;
+          // Save the new default
+          await window.pocketAgent.setSetting('agent.model', models[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to refresh model dropdown:', err);
       }
     }
 
@@ -1412,6 +1492,10 @@
         pattern: /^[a-f0-9]{32}$/i,
         hint: 'ElevenLabs keys are 32 hex characters'
       },
+      'moonshot.apiKey': {
+        pattern: /^sk-[A-Za-z0-9_-]{40,}$/,
+        hint: 'Moonshot keys start with "sk-"'
+      },
       'telegram.botToken': {
         pattern: /^\d{8,10}:[A-Za-z0-9_-]{35}$/,
         hint: 'Telegram tokens are in format "123456789:ABC..."'
@@ -1529,6 +1613,8 @@
           result = await window.pocketAgent.validateAnthropicKey(key);
         } else if (provider === 'openai') {
           result = await window.pocketAgent.validateOpenAIKey(key);
+        } else if (provider === 'moonshot') {
+          result = await window.pocketAgent.validateMoonshotKey(key);
         } else if (provider === 'telegram') {
           result = await window.pocketAgent.validateTelegramToken(key);
         }
@@ -1538,6 +1624,8 @@
           await window.pocketAgent.setSetting(inputId, key);
           settings[inputId] = key;
           showToast(result.botInfo ? `Valid! Bot: @${result.botInfo.username}` : 'All good!', 'success');
+          // Refresh model dropdown after adding a new key
+          await refreshModelDropdown();
         } else {
           showToast(result.error || 'That key didn\'t work', 'error');
         }
@@ -1620,6 +1708,7 @@
       const authMethod = settings['auth.method'];
       const hasOAuth = settings['auth.oauthToken'];
       const hasApiKey = settings['anthropic.apiKey'];
+      const hasMoonshotKey = settings['moonshot.apiKey'];
       const anthropicKeyRow = document.getElementById('anthropic-key-row');
       const authApiKeySection = document.getElementById('auth-api-key-section');
       const brainPowerSection = document.getElementById('brain-power-section');
@@ -1629,7 +1718,8 @@
         oauthCodeSection.style.display = 'none';
       }
 
-      const isConnected = (authMethod === 'oauth' && hasOAuth) || hasApiKey;
+      // Connected if any LLM provider is configured
+      const isConnected = (authMethod === 'oauth' && hasOAuth) || hasApiKey || hasMoonshotKey;
 
       if (authMethod === 'oauth' && hasOAuth) {
         statusBadge.className = 'auth-badge oauth';
@@ -1725,6 +1815,7 @@
           document.getElementById('oauth-code').value = '';
           await loadSettings();
           updateAuthStatus();
+          await refreshModelDropdown();
         } else {
           showToast(result.error || 'That code didn\'t work', 'error');
         }
@@ -1765,6 +1856,7 @@
           activateReboot();
           await loadSettings();
           updateAuthStatus();
+          await refreshModelDropdown();
         } else {
           showToast(result.error || 'Invalid key', 'error');
         }

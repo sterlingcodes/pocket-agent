@@ -1222,6 +1222,38 @@ function setupIPC(): void {
     return SettingsManager.validateTelegramToken(token);
   });
 
+  ipcMain.handle('settings:validateMoonshot', async (_, key: string) => {
+    return SettingsManager.validateMoonshotKey(key);
+  });
+
+  // Get available models based on configured API keys
+  ipcMain.handle('settings:getAvailableModels', async () => {
+    const models: Array<{ id: string; name: string; provider: string }> = [];
+
+    // Check for Anthropic keys (OAuth or API key)
+    const authMethod = SettingsManager.get('auth.method');
+    const hasOAuth = authMethod === 'oauth' && SettingsManager.get('auth.oauthToken');
+    const hasAnthropicKey = SettingsManager.get('anthropic.apiKey');
+
+    if (hasOAuth || hasAnthropicKey) {
+      models.push(
+        { id: 'claude-opus-4-5-20251101', name: 'Opus 4.5', provider: 'anthropic' },
+        { id: 'claude-sonnet-4-5-20250929', name: 'Sonnet 4.5', provider: 'anthropic' },
+        { id: 'claude-haiku-4-5-20251001', name: 'Haiku 4.5', provider: 'anthropic' }
+      );
+    }
+
+    // Check for Moonshot/Kimi key
+    const hasMoonshotKey = SettingsManager.get('moonshot.apiKey');
+    if (hasMoonshotKey) {
+      models.push(
+        { id: 'kimi-k2.5', name: 'Kimi K2.5', provider: 'moonshot' }
+      );
+    }
+
+    return models;
+  });
+
   ipcMain.handle('agent:restart', async () => {
     try {
       await restartAgent();

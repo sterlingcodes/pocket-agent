@@ -85,7 +85,9 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   initializeKeychain: () => ipcRenderer.invoke('settings:initializeKeychain'),
   validateAnthropicKey: (key: string) => ipcRenderer.invoke('settings:validateAnthropic', key),
   validateOpenAIKey: (key: string) => ipcRenderer.invoke('settings:validateOpenAI', key),
+  validateMoonshotKey: (key: string) => ipcRenderer.invoke('settings:validateMoonshot', key),
   validateTelegramToken: (token: string) => ipcRenderer.invoke('settings:validateTelegram', token),
+  getAvailableModels: () => ipcRenderer.invoke('settings:getAvailableModels'),
   restartAgent: () => ipcRenderer.invoke('agent:restart'),
   openSettings: () => ipcRenderer.invoke('app:openSettings'),
   openChat: () => ipcRenderer.invoke('app:openChat'),
@@ -191,7 +193,9 @@ declare global {
       initializeKeychain: () => Promise<{ available: boolean; error?: string }>;
       validateAnthropicKey: (key: string) => Promise<{ valid: boolean; error?: string }>;
       validateOpenAIKey: (key: string) => Promise<{ valid: boolean; error?: string }>;
+      validateMoonshotKey: (key: string) => Promise<{ valid: boolean; error?: string }>;
       validateTelegramToken: (token: string) => Promise<{ valid: boolean; error?: string; botInfo?: unknown }>;
+      getAvailableModels: () => Promise<Array<{ id: string; name: string; provider: string }>>;
       restartAgent: () => Promise<{ success: boolean }>;
       openSettings: () => Promise<void>;
       openChat: () => Promise<void>;

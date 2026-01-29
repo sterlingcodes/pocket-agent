@@ -140,6 +140,15 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
     description: 'For text-to-speech (sag skill)',
     type: 'password',
   },
+  {
+    key: 'moonshot.apiKey',
+    defaultValue: '',
+    encrypted: true,
+    category: 'api_keys',
+    label: 'Moonshot/Kimi API Key',
+    description: 'Your Moonshot API key for Kimi models',
+    type: 'password',
+  },
 
   // Agent settings
   {
@@ -689,6 +698,7 @@ class SettingsManagerClass {
 
   /**
    * Check if required authentication is set
+   * Returns true if any LLM provider key is configured (Anthropic, Moonshot, or OAuth)
    */
   hasRequiredKeys(): boolean {
     const authMethod = this.get('auth.method');
@@ -699,9 +709,10 @@ class SettingsManagerClass {
       return !!oauthToken;
     }
 
-    // Check for API key authentication
+    // Check for API key authentication (Anthropic OR Moonshot)
     const anthropicKey = this.get('anthropic.apiKey');
-    return !!anthropicKey;
+    const moonshotKey = this.get('moonshot.apiKey');
+    return !!anthropicKey || !!moonshotKey;
   }
 
   /**
@@ -851,6 +862,37 @@ class SettingsManagerClass {
   }
 
   /**
+   * Validate a Moonshot/Kimi API key by making a test call
+   */
+  async validateMoonshotKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
+    try {
+      // Moonshot uses Anthropic-compatible API with Bearer token auth
+      const response = await fetch('https://api.moonshot.ai/anthropic/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'kimi-k2.5',
+          max_tokens: 10,
+          messages: [{ role: 'user', content: 'Hi' }],
+        }),
+      });
+
+      if (response.ok) {
+        return { valid: true };
+      }
+
+      const data = await response.json();
+      return { valid: false, error: data.error?.message || 'Invalid API key' };
+    } catch (error) {
+      return { valid: false, error: error instanceof Error ? error.message : 'Connection failed' };
+    }
+  }
+
+  /**
    * Get API keys as environment variables for skill execution.
    * Maps settings keys to the environment variable names that skills expect.
    * Returns empty object if SettingsManager is not initialized yet.
@@ -872,6 +914,7 @@ class SettingsManagerClass {
       'trello.token': 'TRELLO_TOKEN',
       'elevenlabs.apiKey': 'ELEVENLABS_API_KEY',
       'anthropic.apiKey': 'ANTHROPIC_API_KEY',
+      'moonshot.apiKey': 'MOONSHOT_API_KEY',
     };
 
     for (const [settingKey, envVar] of Object.entries(keyMappings)) {
@@ -902,6 +945,7 @@ class SettingsManagerClass {
       'TRELLO_TOKEN': 'trello.token',
       'ELEVENLABS_API_KEY': 'elevenlabs.apiKey',
       'ANTHROPIC_API_KEY': 'anthropic.apiKey',
+      'MOONSHOT_API_KEY': 'moonshot.apiKey',
     };
 
     const settingKey = reverseMapping[envVarName];
