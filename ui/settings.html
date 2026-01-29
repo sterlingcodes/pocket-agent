@@ -1306,7 +1306,8 @@
       try {
         const models = await window.pocketAgent.getAvailableModels();
         const dropdown = document.getElementById('agent.model');
-        const currentValue = dropdown.value;
+        // Read from saved setting, not DOM (DOM might be empty on initial load)
+        const savedModel = await window.pocketAgent.getSetting('agent.model');
 
         // Clear existing options
         dropdown.innerHTML = '';
@@ -1349,14 +1350,14 @@
           dropdown.appendChild(group);
         }
 
-        // Restore current selection if still valid
-        const isValidSelection = models.some(m => m.id === currentValue);
+        // Restore saved selection if still valid for current API keys
+        const isValidSelection = models.some(m => m.id === savedModel);
         if (isValidSelection) {
-          dropdown.value = currentValue;
+          dropdown.value = savedModel;
         } else if (models.length > 0) {
-          // Default to first available model
+          // Only reset to first model if saved model is not available
+          // (e.g., user removed an API key for that provider)
           dropdown.value = models[0].id;
-          // Save the new default
           await window.pocketAgent.setSetting('agent.model', models[0].id);
         }
       } catch (err) {
