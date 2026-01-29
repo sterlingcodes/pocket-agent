@@ -546,6 +546,26 @@
       box-shadow: none;
     }
 
+    /* Scheduled task badge */
+    .message.scheduled {
+      position: relative;
+    }
+
+    .message.scheduled::after {
+      content: attr(data-badge);
+      position: absolute;
+      top: -8px;
+      left: 8px;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      color: var(--accent);
+      background: var(--bg-secondary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--accent);
+    }
+
     /* Queue indicator in status */
     .queue-indicator {
       display: flex;
