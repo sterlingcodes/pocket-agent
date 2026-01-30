@@ -5,7 +5,7 @@ import { spawn, ChildProcess } from 'child_process';
 import { AgentManager } from '../agent';
 import { MemoryManager } from '../memory';
 import { createScheduler, CronScheduler } from '../scheduler';
-import { createTelegramBot, getTelegramBot, TelegramBot } from '../channels/telegram';
+import { createTelegramBot, TelegramBot } from '../channels/telegram';
 import { SettingsManager } from '../settings';
 import { loadIdentity, saveIdentity, getIdentityPath } from '../config/identity';
 import { loadInstructions, saveInstructions, getInstructionsPath } from '../config/instructions';
@@ -307,14 +307,25 @@ ${heartbeatInstruction}
 
 async function createTray(): Promise<void> {
   const iconPath = path.join(__dirname, '../../assets/tray-icon.png');
+  const iconPath2x = path.join(__dirname, '../../assets/tray-icon@2x.png');
   let icon: Electron.NativeImage;
 
   try {
-    icon = nativeImage.createFromPath(iconPath);
-    if (icon.isEmpty()) {
-      icon = createDefaultIcon();
-    } else {
+    // Load both 1x and 2x versions for retina support
+    const icon1x = nativeImage.createFromPath(iconPath);
+    const icon2x = nativeImage.createFromPath(iconPath2x);
+
+    if (!icon1x.isEmpty() && !icon2x.isEmpty()) {
+      // Create a multi-resolution image
+      icon = nativeImage.createEmpty();
+      icon.addRepresentation({ scaleFactor: 1, width: 22, height: 22, buffer: icon1x.resize({ width: 22, height: 22 }).toPNG() });
+      icon.addRepresentation({ scaleFactor: 2, width: 44, height: 44, buffer: icon2x.resize({ width: 44, height: 44 }).toPNG() });
       icon.setTemplateImage(true); // For macOS menu bar
+    } else if (!icon1x.isEmpty()) {
+      icon = icon1x.resize({ width: 22, height: 22 });
+      icon.setTemplateImage(true);
+    } else {
+      icon = createDefaultIcon();
     }
   } catch {
     icon = createDefaultIcon();
@@ -390,21 +401,31 @@ function updateTrayMenu(): void {
   if (!tray) return;
 
   const stats = AgentManager.getStats();
-  const telegramEnabled = SettingsManager.getBoolean('telegram.enabled');
 
   const statusText = AgentManager.isInitialized()
     ? `Messages: ${stats?.messageCount || 0} | Facts: ${stats?.factCount || 0}`
     : 'Not initialized';
 
-  const telegramStatus = telegramEnabled
-    ? (getTelegramBot()?.isRunning ? '✓ Connected' : '✗ Disconnected')
-    : 'Disabled';
+  // Load menu icon
+  const menuIconPath = path.join(__dirname, '../../assets/menu-icon.png');
+  let menuIcon: Electron.NativeImage | undefined;
+  try {
+    menuIcon = nativeImage.createFromPath(menuIconPath);
+    if (!menuIcon.isEmpty()) {
+      menuIcon = menuIcon.resize({ width: 16, height: 16 });
+      menuIcon.setTemplateImage(true);
+    } else {
+      menuIcon = undefined;
+    }
+  } catch {
+    menuIcon = undefined;
+  }
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Pocket Agent',
+      label: `Pocket Agent v${app.getVersion()}`,
       enabled: false,
-      icon: createDefaultIcon(),
+      icon: menuIcon,
     },
     { type: 'separator' },
     {
@@ -417,10 +438,6 @@ function updateTrayMenu(): void {
       label: statusText,
       enabled: false,
     },
-    {
-      label: `Telegram: ${telegramStatus}`,
-      enabled: false,
-    },
     { type: 'separator' },
     {
       label: 'Tweaks...',
@@ -430,6 +447,10 @@ function updateTrayMenu(): void {
     {
       label: 'Superpowers...',
       click: () => createSkillsSetupWindow(),
+    },
+    {
+      label: 'Check for Updates...',
+      click: () => openSettingsWindow('updates'),
     },
     { type: 'separator' },
     {
@@ -566,9 +587,13 @@ function openCronWindow(): void {
   });
 }
 
-function openSettingsWindow(): void {
+function openSettingsWindow(tab?: string): void {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.focus();
+    // If a specific tab is requested, navigate to it
+    if (tab) {
+      settingsWindow.webContents.send('navigate-tab', tab);
+    }
     return;
   }
 
@@ -600,7 +625,8 @@ function openSettingsWindow(): void {
 
   // Clear cache to ensure fresh HTML loads during development
   settingsWindow.webContents.session.clearCache().then(() => {
-    settingsWindow?.loadFile(path.join(__dirname, '../../ui/settings.html'));
+    const hash = tab ? `#${tab}` : '';
+    settingsWindow?.loadFile(path.join(__dirname, '../../ui/settings.html'), { hash });
   });
 
   settingsWindow.once('ready-to-show', () => {

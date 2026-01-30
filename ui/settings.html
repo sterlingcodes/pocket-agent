@@ -1461,15 +1461,34 @@
       navItems.forEach(item => {
         item.addEventListener('click', () => {
           const sectionId = item.dataset.section;
-
-          navItems.forEach(n => n.classList.remove('active'));
-          item.classList.add('active');
-
-          sections.forEach(s => s.classList.remove('active'));
-          document.getElementById(sectionId).classList.add('active');
+          navigateToSection(sectionId);
         });
       });
 
+      // Handle hash navigation (e.g., #updates)
+      const hash = window.location.hash.slice(1);
+      if (hash) {
+        navigateToSection(hash);
+      }
+
+      // Listen for IPC navigation requests
+      if (window.pocketAgent?.onNavigateTab) {
+        window.pocketAgent.onNavigateTab((tab) => navigateToSection(tab));
+      }
+    }
+
+    function navigateToSection(sectionId) {
+      const navItems = document.querySelectorAll('.nav-item');
+      const sections = document.querySelectorAll('.section');
+      const targetNav = document.querySelector(`.nav-item[data-section="${sectionId}"]`);
+      const targetSection = document.getElementById(sectionId);
+
+      if (targetNav && targetSection) {
+        navItems.forEach(n => n.classList.remove('active'));
+        targetNav.classList.add('active');
+        sections.forEach(s => s.classList.remove('active'));
+        targetSection.classList.add('active');
+      }
     }
 
     function setupAutoSave() {

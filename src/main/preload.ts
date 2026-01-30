@@ -120,6 +120,13 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     ipcRenderer.on('updater:status', listener);
     return () => ipcRenderer.removeListener('updater:status', listener);
   },
+
+  // Navigation
+  onNavigateTab: (callback: (tab: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, tab: string) => callback(tab);
+    ipcRenderer.on('navigate-tab', listener);
+    return () => ipcRenderer.removeListener('navigate-tab', listener);
+  },
 });
 
 // Session type
