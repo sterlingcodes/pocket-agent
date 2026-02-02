@@ -27,17 +27,14 @@ type ProviderType = 'anthropic' | 'moonshot';
 
 interface ProviderConfig {
   baseUrl?: string;
-  useAuthToken: boolean;  // Use ANTHROPIC_AUTH_TOKEN (Bearer) vs ANTHROPIC_API_KEY (x-api-key)
 }
 
 const PROVIDER_CONFIGS: Record<ProviderType, ProviderConfig> = {
   'anthropic': {
     // No baseUrl = uses default Anthropic endpoint
-    useAuthToken: false,
   },
   'moonshot': {
     baseUrl: 'https://api.moonshot.ai/anthropic/',
-    useAuthToken: true,  // Moonshot uses Bearer token auth
   },
 };
 
@@ -81,7 +78,7 @@ function configureProviderEnvironment(model: string): void {
     process.env.ANTHROPIC_BASE_URL = config.baseUrl;
     process.env.ANTHROPIC_AUTH_TOKEN = moonshotKey;
     // Clear ANTHROPIC_API_KEY so SDK uses AUTH_TOKEN instead
-    process.env.ANTHROPIC_API_KEY = '';
+    delete process.env.ANTHROPIC_API_KEY;
 
     console.log('[AgentManager] Provider configured: Moonshot (Kimi)');
   } else {
@@ -624,7 +621,8 @@ class AgentManagerClass extends EventEmitter {
       if (this.processingBySession.get(sessionId) && abortController) {
         console.log(`[AgentManager] Stopping query for session ${sessionId}...`);
         abortController.abort();
-        this.emitStatus({ type: 'done' });
+        // Note: Don't emit 'done' here - it would broadcast to ALL sessions.
+        // The frontend handles cleanup on its end when stopping/deleting a session.
         return true;
       }
       return false;
@@ -640,7 +638,6 @@ class AgentManagerClass extends EventEmitter {
         if (abortController) {
           console.log(`[AgentManager] Stopping query for session ${sid}...`);
           abortController.abort();
-          this.emitStatus({ type: 'done' });
           return true;
         }
       }
