@@ -509,12 +509,23 @@ function showSplashScreen(): void {
   splashWindow.on('closed', () => {
     splashWindow = null;
   });
+
+  // Safety timeout - force close splash after 5 seconds if IPC fails
+  setTimeout(() => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      console.log('[Main] Safety timeout: force-closing splash screen');
+      closeSplashScreen();
+    }
+  }, 5000);
 }
 
 function closeSplashScreen(): void {
+  console.log('[Main] closeSplashScreen called, splashWindow exists:', !!splashWindow);
   if (splashWindow && !splashWindow.isDestroyed()) {
+    console.log('[Main] Closing splash window...');
     splashWindow.close();
     splashWindow = null;
+    console.log('[Main] Splash window closed');
   }
 }
 

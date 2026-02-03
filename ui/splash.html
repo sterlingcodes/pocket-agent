@@ -118,12 +118,21 @@
   </audio>
 
   <script>
-    const { ipcRenderer } = require('electron');
-
     // Play sound and notify main process when done
     window.addEventListener('DOMContentLoaded', () => {
       const audio = document.getElementById('sparkle');
       const splash = document.getElementById('splash');
+
+      function complete() {
+        splash.classList.add('fade-out');
+        setTimeout(() => {
+          if (window.splash && window.splash.complete) {
+            window.splash.complete();
+          } else {
+            console.error('[Splash] window.splash.complete not available');
+          }
+        }, 300);
+      }
 
       // Play the sparkle sound
       audio.play().catch(err => {
@@ -132,21 +141,17 @@
 
       // When audio ends, fade out and close
       audio.addEventListener('ended', () => {
-        splash.classList.add('fade-out');
-        setTimeout(() => {
-          ipcRenderer.send('splash-complete');
-        }, 300); // Wait for fade animation
+        if (!splash.classList.contains('fade-out')) {
+          complete();
+        }
       });
 
       // Fallback in case audio doesn't play
       setTimeout(() => {
         if (!splash.classList.contains('fade-out')) {
-          splash.classList.add('fade-out');
-          setTimeout(() => {
-            ipcRenderer.send('splash-complete');
-          }, 300);
+          complete();
         }
-      }, 2500); // Slightly longer than audio duration as fallback
+      }, 2500);
     });
   </script>
 </body>
