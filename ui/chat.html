@@ -587,6 +587,50 @@
       background: var(--text-muted);
     }
 
+    /* Scroll Buttons */
+    .scroll-btn {
+      position: fixed;
+      right: 24px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+      z-index: 100;
+    }
+
+    .scroll-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      border-color: var(--text-muted);
+    }
+
+    .scroll-btn.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .scroll-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    #scroll-top-btn {
+      top: 100px;
+    }
+
+    #scroll-bottom-btn {
+      bottom: 140px;
+    }
+
     /* Message Bubbles */
     .message {
       max-width: 80%;
@@ -1934,6 +1978,18 @@
   </div>
 
   <div id="messages"></div>
+
+  <!-- Scroll Buttons -->
+  <button id="scroll-top-btn" class="scroll-btn" onclick="playNormalClick(); scrollToTop()" title="Scroll to top">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="18 15 12 9 6 15"></polyline>
+    </svg>
+  </button>
+  <button id="scroll-bottom-btn" class="scroll-btn" onclick="playNormalClick(); scrollToBottom()" title="Scroll to bottom">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+  </button>
 
   <!-- Search Area -->
   <div id="search-area">
@@ -3638,6 +3694,43 @@
         });
       });
     }
+
+    function scrollToTop() {
+      requestAnimationFrame(() => {
+        messagesDiv.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+    }
+
+    // Scroll button visibility
+    const scrollTopBtn = document.getElementById('scroll-top-btn');
+    const scrollBottomBtn = document.getElementById('scroll-bottom-btn');
+    const SCROLL_THRESHOLD = 200;
+
+    function updateScrollButtons() {
+      const scrollTop = messagesDiv.scrollTop;
+      const scrollHeight = messagesDiv.scrollHeight;
+      const clientHeight = messagesDiv.clientHeight;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+      // Show "scroll to top" when scrolled down past threshold
+      if (scrollTop > SCROLL_THRESHOLD) {
+        scrollTopBtn.classList.add('visible');
+      } else {
+        scrollTopBtn.classList.remove('visible');
+      }
+
+      // Show "scroll to bottom" when not at bottom
+      if (distanceFromBottom > SCROLL_THRESHOLD) {
+        scrollBottomBtn.classList.add('visible');
+      } else {
+        scrollBottomBtn.classList.remove('visible');
+      }
+    }
+
+    messagesDiv.addEventListener('scroll', updateScrollButtons);
 
     function handleKeydown(e) {
       // Tab: Accept the suggestion and place cursor at end
