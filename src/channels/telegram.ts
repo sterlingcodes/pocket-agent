@@ -16,6 +16,7 @@ function markdownToTelegramHtml(text: string): string {
   const protected_content: string[] = [];
 
   // Extract and protect code blocks first (```...```)
+  // Note: Markers use «» instead of underscores to avoid italic regex matching _N_
   result = result.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _lang, code) => {
     const idx = protected_content.length;
     const escapedCode = code
@@ -24,7 +25,7 @@ function markdownToTelegramHtml(text: string): string {
       .replace(/>/g, '&gt;')
       .trim();
     protected_content.push(`<pre>${escapedCode}</pre>`);
-    return `\n@@PROTECTED_${idx}@@\n`;
+    return `\n@@PROTECTED«${idx}»@@\n`;
   });
 
   // Extract and protect inline code (`...`)
@@ -35,7 +36,7 @@ function markdownToTelegramHtml(text: string): string {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
     protected_content.push(`<code>${escapedCode}</code>`);
-    return `@@PROTECTED_${idx}@@`;
+    return `@@PROTECTED«${idx}»@@`;
   });
 
   // Extract and protect links [text](url) - before escaping
@@ -46,7 +47,7 @@ function markdownToTelegramHtml(text: string): string {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
     protected_content.push(`<a href="${url}">${escapedText}</a>`);
-    return `@@PROTECTED_${idx}@@`;
+    return `@@PROTECTED«${idx}»@@`;
   });
 
   // Escape HTML in the rest of the text
@@ -142,7 +143,7 @@ function markdownToTelegramHtml(text: string): string {
 
   // Restore protected content
   protected_content.forEach((content, idx) => {
-    result = result.replace(`@@PROTECTED_${idx}@@`, content);
+    result = result.replace(`@@PROTECTED«${idx}»@@`, content);
   });
 
   // Clean up excessive newlines
