@@ -1611,6 +1611,11 @@
       if (window.pocketAgent?.onNavigateTab) {
         window.pocketAgent.onNavigateTab((tab) => navigateToSection(tab));
       }
+
+      // Listen for model changes from other sources (e.g., Telegram)
+      if (window.pocketAgent?.onModelChanged) {
+        window.pocketAgent.onModelChanged(() => refreshModelDropdown());
+      }
     }
 
     function navigateToSection(sectionId) {

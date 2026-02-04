@@ -316,6 +316,17 @@ class AgentManagerClass extends EventEmitter {
     return this.initialized && this.memory !== null;
   }
 
+  getModel(): string {
+    return this.model;
+  }
+
+  setModel(model: string): void {
+    this.model = model;
+    SettingsManager.set('agent.model', model);
+    console.log('[AgentManager] Model changed to:', model);
+    this.emit('model:changed', model);
+  }
+
   async processMessage(
     userMessage: string,
     channel: string = 'default',

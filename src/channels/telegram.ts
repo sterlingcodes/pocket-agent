@@ -479,10 +479,11 @@ export class TelegramBot extends BaseChannel {
         `I remember our conversations across sessions.\n\n` +
         `Your user ID: ${userId}\n\n` +
         `Commands:\n` +
+        `/help - How to use Pocket Agent\n` +
+        `/new - Fresh start (keeps facts & reminders)\n` +
+        `/model - List or switch AI models\n` +
         `/status - Show agent status\n` +
-        `/facts [query] - Search stored facts\n` +
-        `/clear - Clear conversation (keeps facts)\n` +
-        `/mychatid - Show your chat ID for cron jobs` +
+        `/facts [query] - Search stored facts` +
         (isGroup ? `\n/link <session> - Link this group to a session\n/unlink - Unlink this group` : '')
       );
     });
@@ -567,10 +568,111 @@ export class TelegramBot extends BaseChannel {
       await ctx.reply(`Found ${facts.length} fact(s):\n\n${response}`);
     });
 
-    // Handle /clear command
-    this.bot.command('clear', async (ctx) => {
-      AgentManager.clearConversation();
-      await ctx.reply('✅ Conversation history cleared.\nFacts and scheduled tasks are preserved.');
+    // Handle /help command
+    this.bot.command('help', async (ctx) => {
+      const helpText =
+`<b>Pocket Agent</b>
+
+Your AI assistant with persistent memory. I remember our conversations and learn about you over time.
+
+<b>Commands</b>
+/new — Clear chat history (fresh start)
+/model — View or switch AI models
+/status — See stats and memory usage
+/facts — Browse what I remember about you
+
+<b>Tips</b>
+• Send text, photos, or voice messages
+• I remember context across sessions
+• Use /new to reset without losing memories`;
+
+      await ctx.reply(helpText, { parse_mode: 'HTML' });
+    });
+
+    // Handle /new command (fresh start - session-aware)
+    this.bot.command('new', async (ctx) => {
+      const chatId = ctx.chat?.id;
+      const memory = AgentManager.getMemory();
+      const sessionId = chatId && memory ? memory.getSessionForChat(chatId) || 'default' : 'default';
+
+      AgentManager.clearConversation(sessionId);
+      await ctx.reply('✨ Fresh start! Conversation cleared.\nDon\'t worry - I still remember everything about you.');
+    });
+
+    // Handle /model command
+    this.bot.command('model', async (ctx) => {
+      const args = ctx.message?.text?.split(/\s+/).slice(1) || [];
+      const subcommand = args[0]?.toLowerCase();
+
+      // Get available models based on configured API keys
+      const availableModels: Array<{ id: string; name: string; provider: string }> = [];
+
+      const authMethod = SettingsManager.get('auth.method');
+      const hasOAuth = authMethod === 'oauth' && SettingsManager.get('auth.oauthToken');
+      const hasAnthropicKey = SettingsManager.get('anthropic.apiKey');
+
+      if (hasOAuth || hasAnthropicKey) {
+        availableModels.push(
+          { id: 'claude-opus-4-5-20251101', name: 'Opus 4.5', provider: 'Anthropic' },
+          { id: 'claude-sonnet-4-5-20250929', name: 'Sonnet 4.5', provider: 'Anthropic' },
+          { id: 'claude-haiku-4-5-20251001', name: 'Haiku 4.5', provider: 'Anthropic' }
+        );
+      }
+
+      if (SettingsManager.get('moonshot.apiKey')) {
+        availableModels.push({ id: 'kimi-k2.5', name: 'Kimi K2.5', provider: 'Moonshot' });
+      }
+
+      if (SettingsManager.get('glm.apiKey')) {
+        availableModels.push({ id: 'glm-4.7', name: 'GLM 4.7', provider: 'Z.AI' });
+      }
+
+      const currentModel = AgentManager.getModel();
+
+      // /model or /model list - show available models
+      if (!subcommand || subcommand === 'list') {
+        if (availableModels.length === 0) {
+          await ctx.reply('No models available. Please configure API keys in Settings.');
+          return;
+        }
+
+        const modelList = availableModels
+          .map(m => {
+            const isCurrent = m.id === currentModel ? ' ✓' : '';
+            return `• ${m.name}${isCurrent}`;
+          })
+          .join('\n');
+
+        await ctx.reply(
+          `Available models:\n\n${modelList}\n\n` +
+          `Use /model <name> to switch.\n` +
+          `Example: /model sonnet`
+        );
+        return;
+      }
+
+      // /model <name> - switch to that model
+      const searchTerm = subcommand;
+      const matchedModel = availableModels.find(m =>
+        m.id.toLowerCase().includes(searchTerm) ||
+        m.name.toLowerCase().includes(searchTerm)
+      );
+
+      if (!matchedModel) {
+        await ctx.reply(
+          `Model "${searchTerm}" not found.\n\n` +
+          `Available: ${availableModels.map(m => m.name).join(', ')}`
+        );
+        return;
+      }
+
+      if (matchedModel.id === currentModel) {
+        await ctx.reply(`Already using ${matchedModel.name}.`);
+        return;
+      }
+
+      AgentManager.setModel(matchedModel.id);
+      await ctx.reply(`✅ Switched to ${matchedModel.name}.`);
     });
 
     // Handle /testhtml command - for debugging HTML formatting

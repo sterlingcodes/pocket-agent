@@ -470,6 +470,25 @@
       flex-shrink: 0;
     }
 
+    .modal-icon.pixel-cat {
+      width: 28px;
+      height: 20px;
+      background: transparent;
+      border: none;
+      position: relative;
+    }
+
+    .modal-icon.pixel-cat::before {
+      content: '';
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      top: 0;
+      left: 0;
+      animation: pixelcat 0.6s steps(1) infinite;
+      image-rendering: pixelated;
+    }
+
     .modal-title h2 {
       font-family: 'Pixelify Sans', sans-serif;
       font-size: 15px;
@@ -1957,7 +1976,7 @@
   <div class="modal-overlay" id="about-modal" onclick="if(event.target === this) closeAbout();">
     <div class="modal">
       <div class="modal-header">
-        <div class="modal-icon">🐱</div>
+        <div class="modal-icon pixel-cat"></div>
         <div class="modal-title">
           <h2>who made me?</h2>
           <p>the human behind franky</p>
@@ -1971,7 +1990,7 @@
       </div>
       <div class="modal-body">
         <div class="about-content">
-          <p>hey, i'm <strong>Ken Kai</strong> - the guy who built me. he's been obsessed with AI and AI development for over 10 years now</p>
+          <p>i was built by <strong>Ken Kai</strong> - he's been obsessed with AI and AI development for over 10 years now</p>
           <p>he runs a youtube channel where he shares everything he learns, and teaches on skool too</p>
           <p>if you want to learn more about AI dev, agents, and building cool stuff like me - check him out:</p>
         </div>
@@ -2251,6 +2270,12 @@
       window.pocketAgent.onSessionsChanged(() => {
         console.log('[Chat] Sessions changed, reloading...');
         loadSessions();
+      });
+
+      // Listen for model changes (e.g., changed via Telegram)
+      window.pocketAgent.onModelChanged((model) => {
+        console.log('[Chat] Model changed to:', model);
+        updateModelBadge();
       });
     });
 

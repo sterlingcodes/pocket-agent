@@ -1828,6 +1828,16 @@ async function initializeAgent(): Promise<void> {
     tools: toolsConfig,
   });
 
+  // Listen for model changes and broadcast to UI
+  AgentManager.on('model:changed', (model: string) => {
+    if (chatWindow && !chatWindow.isDestroyed()) {
+      chatWindow.webContents.send('model:changed', model);
+    }
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+      settingsWindow.webContents.send('model:changed', model);
+    }
+  });
+
   // Initialize scheduler
   if (SettingsManager.getBoolean('scheduler.enabled')) {
     scheduler = createScheduler();
