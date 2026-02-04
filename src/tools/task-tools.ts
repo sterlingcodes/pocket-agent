@@ -193,7 +193,7 @@ function ensureTable(db: Database.Database): void {
 export function getTaskAddToolDefinition() {
   return {
     name: 'task_add',
-    description: 'Add a new task/todo item with optional due date, priority (low/medium/high), and reminder.',
+    description: 'Add a todo item to the task list. Use for trackable items with status (pending/completed). For one-time "remind me" notifications, use create_reminder instead. For scheduled LLM actions, use create_routine.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -201,8 +201,8 @@ export function getTaskAddToolDefinition() {
         description: { type: 'string', description: 'Optional task description' },
         due: { type: 'string', description: 'Due date (e.g., "tomorrow", "friday 5pm")' },
         priority: { type: 'string', description: 'Priority: low, medium, high (default: medium)' },
-        reminder_minutes: { type: 'number', description: 'Minutes before due to remind' },
-        channel: { type: 'string', description: 'Where to send reminder: desktop or telegram' },
+        reminder_minutes: { type: 'number', description: 'Minutes before due date to send a reminder notification' },
+        channel: { type: 'string', description: 'Where to send due-date reminder: desktop or telegram' },
       },
       required: ['title'],
     },
@@ -267,7 +267,7 @@ export async function handleTaskAddTool(input: unknown): Promise<string> {
 export function getTaskListToolDefinition() {
   return {
     name: 'task_list',
-    description: 'List tasks/todos. Filter by status: pending (default), completed, in_progress, or all.',
+    description: 'List todo items from the task list. Filter by status: pending (default), completed, in_progress, or all. For scheduled routines/reminders, use list_routines instead.',
     input_schema: {
       type: 'object' as const,
       properties: {
