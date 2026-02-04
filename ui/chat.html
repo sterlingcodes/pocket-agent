@@ -2222,6 +2222,12 @@
         handleTelegramMessage(data);
       });
       console.log('[Chat] Telegram message listener set up');
+
+      // Listen for session changes (e.g., Telegram link/unlink)
+      window.pocketAgent.onSessionsChanged(() => {
+        console.log('[Chat] Sessions changed, reloading...');
+        loadSessions();
+      });
     });
 
     // ============ SESSION MANAGEMENT ============

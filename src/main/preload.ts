@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('pocketAgent', {
     ipcRenderer.on('telegram:message', listener);
     return () => ipcRenderer.removeListener('telegram:message', listener);
   },
+  onSessionsChanged: (callback: () => void) => {
+    const listener = () => callback();
+    ipcRenderer.on('sessions:changed', listener);
+    return () => ipcRenderer.removeListener('sessions:changed', listener);
+  },
   getHistory: (limit?: number, sessionId?: string) => ipcRenderer.invoke('agent:history', limit, sessionId),
   getStats: (sessionId?: string) => ipcRenderer.invoke('agent:stats', sessionId),
   clearConversation: (sessionId?: string) => ipcRenderer.invoke('agent:clear', sessionId),
@@ -155,6 +160,7 @@ declare global {
       saveAttachment: (name: string, dataUrl: string) => Promise<string>;
       onSchedulerMessage: (callback: (data: { jobName: string; prompt: string; response: string; sessionId: string }) => void) => () => void;
       onTelegramMessage: (callback: (data: { userMessage: string; response: string; chatId: number; sessionId: string; hasAttachment?: boolean; attachmentType?: 'photo' | 'voice' | 'audio' }) => void) => () => void;
+      onSessionsChanged: (callback: () => void) => () => void;
       getHistory: (limit?: number, sessionId?: string) => Promise<Array<{ role: string; content: string; timestamp: string; metadata?: { source?: string; jobName?: string } }>>;
       getStats: (sessionId?: string) => Promise<{ messageCount: number; factCount: number; estimatedTokens: number; sessionCount?: number } | null>;
       clearConversation: (sessionId?: string) => Promise<{ success: boolean }>;

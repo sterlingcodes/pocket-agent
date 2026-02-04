@@ -224,12 +224,18 @@ export type MessageCallback = (data: {
   attachmentType?: 'photo' | 'voice' | 'audio';
 }) => void;
 
+type SessionLinkCallback = (data: {
+  sessionId: string;
+  linked: boolean;
+}) => void;
+
 export class TelegramBot extends BaseChannel {
   name = 'telegram';
   private bot: Bot;
   private allowedUserIds: Set<number>;
   private activeChatIds: Set<number> = new Set();
   private onMessageCallback: MessageCallback | null = null;
+  private onSessionLinkCallback: SessionLinkCallback | null = null;
 
   constructor() {
     super();
@@ -285,6 +291,13 @@ export class TelegramBot extends BaseChannel {
    */
   setOnMessageCallback(callback: MessageCallback): void {
     this.onMessageCallback = callback;
+  }
+
+  /**
+   * Set callback for when session links are created or removed (for UI refresh)
+   */
+  setOnSessionLinkCallback(callback: SessionLinkCallback): void {
+    this.onSessionLinkCallback = callback;
   }
 
   private setupHandlers(): void {
@@ -360,6 +373,8 @@ export class TelegramBot extends BaseChannel {
           `• Disable Privacy Mode via @BotFather (/setprivacy → Disable)`
         );
         console.log(`[Telegram] Linked group "${groupName}" (chatId: ${chatId}) to session "${session.id}"`);
+        // Notify UI to refresh sessions
+        this.onSessionLinkCallback?.({ sessionId: session.id, linked: true });
       } else {
         // List available sessions
         const sessions = memory.getSessions();
@@ -424,6 +439,8 @@ export class TelegramBot extends BaseChannel {
         `• Disable Privacy Mode via @BotFather (/setprivacy → Disable)`
       );
       console.log(`[Telegram] Manually linked chat ${chatId} to session "${session.id}"`);
+      // Notify UI to refresh sessions
+      this.onSessionLinkCallback?.({ sessionId: session.id, linked: true });
     });
 
     // Handle /unlink command
@@ -437,8 +454,8 @@ export class TelegramBot extends BaseChannel {
         return;
       }
 
-      const currentSession = memory.getSessionForChat(chatId);
-      if (!currentSession) {
+      const currentSessionId = memory.getSessionForChat(chatId);
+      if (!currentSessionId) {
         await ctx.reply('This chat is not linked to any session.');
         return;
       }
@@ -446,6 +463,8 @@ export class TelegramBot extends BaseChannel {
       memory.unlinkTelegramChat(chatId);
       await ctx.reply('✅ Chat unlinked. Messages will now go to the default session.');
       console.log(`[Telegram] Unlinked chat ${chatId}`);
+      // Notify UI to refresh sessions
+      this.onSessionLinkCallback?.({ sessionId: currentSessionId, linked: false });
     });
 
     // Handle /start command

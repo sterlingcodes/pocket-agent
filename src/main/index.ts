@@ -1896,6 +1896,13 @@ async function initializeAgent(): Promise<void> {
           // Messages are already saved to SQLite, so they'll appear when user opens chat
         });
 
+        // Notify UI when Telegram session links change
+        telegramBot.setOnSessionLinkCallback(() => {
+          if (chatWindow && !chatWindow.isDestroyed()) {
+            chatWindow.webContents.send('sessions:changed');
+          }
+        });
+
         await telegramBot.start();
 
         if (scheduler) {
