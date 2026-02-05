@@ -162,7 +162,7 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
   // Agent settings
   {
     key: 'agent.model',
-    defaultValue: 'claude-opus-4-5-20251101',
+    defaultValue: 'claude-opus-4-6',
     encrypted: false,
     category: 'agent',
     label: 'Default Model',

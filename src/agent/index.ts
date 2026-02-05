@@ -34,6 +34,7 @@ const PROVIDER_CONFIGS: Record<ProviderType, ProviderConfig> = {
 // Model to provider mapping
 const MODEL_PROVIDERS: Record<string, ProviderType> = {
   // Anthropic models
+  'claude-opus-4-6': 'anthropic',
   'claude-opus-4-5-20251101': 'anthropic',
   'claude-sonnet-4-5-20250929': 'anthropic',
   'claude-haiku-4-5-20251001': 'anthropic',
@@ -231,7 +232,7 @@ class AgentManagerClass extends EventEmitter {
   private memory: MemoryManager | null = null;
   private projectRoot: string = process.cwd();
   private workspace: string = process.cwd();  // Isolated working directory for agent
-  private model: string = 'claude-opus-4-5-20251101';
+  private model: string = 'claude-opus-4-6';
   private toolsConfig: ToolsConfig | null = null;
   private initialized: boolean = false;
   private identity: string = '';
