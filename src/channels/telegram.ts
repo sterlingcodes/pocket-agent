@@ -675,31 +675,6 @@ Your AI assistant with persistent memory. I remember our conversations and learn
       await ctx.reply(`✅ Switched to ${matchedModel.name}.`);
     });
 
-    // Handle /testhtml command - for debugging HTML formatting
-    this.bot.command('testhtml', async (ctx) => {
-      const testHtml = `<b>Bold text</b>
-<i>Italic text</i>
-<u>Underline text</u>
-<s>Strikethrough text</s>
-<code>inline code</code>
-<pre>code block
-multiline</pre>
-<a href="https://example.com">Link text</a>
-
-• Bullet point 1
-• Bullet point 2
-
-1. Numbered item
-2. Another item`;
-
-      try {
-        await ctx.reply(testHtml, { parse_mode: 'HTML' });
-      } catch (error) {
-        console.error('[Telegram] Test HTML failed:', error);
-        await ctx.reply('HTML test failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
-      }
-    });
-
     // Handle all text messages
     this.bot.on('message:text', async (ctx: Context) => {
       const message = ctx.message?.text;
