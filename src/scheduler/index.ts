@@ -279,6 +279,11 @@ export class CronScheduler {
           // Reminders: display the pre-composed message directly, NO LLM call
           response = job.prompt;
           console.log(`[Scheduler] Reminder (no LLM): ${job.name}`);
+
+          // Save reminder to messages table for persistence and history display
+          if (this.memory) {
+            this.memory.saveMessage('assistant', response, sessionId, { source: 'scheduler', jobName: job.name });
+          }
         } else {
           // Routines: call LLM with context
           let contextText = '';
@@ -455,6 +460,11 @@ export class CronScheduler {
    */
   private async sendReminder(type: 'calendar' | 'task', title: string, message: string, channel: string, sessionId: string = 'default'): Promise<void> {
     console.log(`[Scheduler] Sending ${type} reminder: ${title} (session: ${sessionId})`);
+
+    // Save reminder to messages table for persistence and history display
+    if (this.memory) {
+      this.memory.saveMessage('assistant', message, sessionId, { source: 'scheduler', jobName: `${type}_reminder` });
+    }
 
     // Always send to desktop (notification + chat to the correct session)
     if (this.onNotification) {
