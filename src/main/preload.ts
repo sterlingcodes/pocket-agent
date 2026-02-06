@@ -111,19 +111,6 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   // Commands (Workflows)
   getCommands: () => ipcRenderer.invoke('commands:list'),
 
-  // Skills
-  getSkillsStatus: () => ipcRenderer.invoke('skills:getStatus'),
-  installSkillDeps: (skillName: string) => ipcRenderer.invoke('skills:install', skillName),
-  uninstallSkillDeps: (skillName: string) => ipcRenderer.invoke('skills:uninstall', skillName),
-  openSkillsSetup: () => ipcRenderer.invoke('app:openSkillsSetup'),
-  openPermissionSettings: (permissionType: string) => ipcRenderer.invoke('skills:openPermissionSettings', permissionType),
-  checkPermission: (permissionType: string) => ipcRenderer.invoke('skills:checkPermission', permissionType),
-  getSkillSetupConfig: (skillName: string) => ipcRenderer.invoke('skills:getSetupConfig', skillName),
-  runSkillSetupCommand: (params: { skillName: string; stepId: string; inputs?: Record<string, string> }) =>
-    ipcRenderer.invoke('skills:runSetupCommand', params),
-  selectFile: (options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
-    ipcRenderer.invoke('skills:selectFile', options || {}),
-
   // Updates
   checkForUpdates: () => ipcRenderer.invoke('updater:checkForUpdates'),
   downloadUpdate: () => ipcRenderer.invoke('updater:downloadUpdate'),
@@ -241,46 +228,6 @@ declare global {
       isOAuthPending: () => Promise<boolean>;
       // Commands (Workflows)
       getCommands: () => Promise<Array<{ name: string; description: string; filename: string; content: string }>>;
-      // Skills
-      getSkillsStatus: () => Promise<{
-        skills: Array<{
-          name: string;
-          available: boolean;
-          missingBins: string[];
-          missingEnvVars: string[];
-          requiredEnvVars: string[];
-          missingPermissions: string[];
-          requiredPermissions: string[];
-          osCompatible: boolean;
-          installOptions: Array<{ id: string; kind: string; label: string; bins?: string[] }>;
-        }>;
-        summary: { total: number; available: number; unavailable: number; incompatible: number };
-        prerequisites: { brew: boolean; go: boolean; node: boolean; uv: boolean; git: boolean };
-      }>;
-      installSkillDeps: (skillName: string) => Promise<{ success: boolean; installed: string[]; failed: string[] }>;
-      uninstallSkillDeps: (skillName: string) => Promise<{ success: boolean; removed: string[]; failed: string[] }>;
-      openSkillsSetup: () => Promise<void>;
-      openPermissionSettings: (permissionType: string) => Promise<void>;
-      checkPermission: (permissionType: string) => Promise<{ type: string; granted: boolean; canRequest: boolean; label: string; description: string; settingsUrl: string }>;
-      getSkillSetupConfig: (skillName: string) => Promise<{
-        found: boolean;
-        setup?: {
-          type: string;
-          title: string;
-          steps: Array<{
-            id: string;
-            title: string;
-            description: string;
-            action: string;
-            command?: string;
-            inputs?: Array<{ id: string; label: string; placeholder?: string }>;
-            file_type?: string;
-            help_url?: string;
-            verify?: boolean;
-          }>;
-        };
-      }>;
-      runSkillSetupCommand: (command: string) => Promise<{ success: boolean; output?: string; error?: string }>;
       // Updates
       checkForUpdates: () => Promise<{ status: string; info?: { version: string }; error?: string }>;
       downloadUpdate: () => Promise<{ success: boolean; error?: string }>;

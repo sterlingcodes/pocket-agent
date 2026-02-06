@@ -415,16 +415,6 @@ export const SETTINGS_SCHEMA: SettingDefinition[] = [
     description: 'Saved position and size of facts window (JSON)',
     type: 'string',
   },
-  {
-    key: 'window.skillsSetupBounds',
-    defaultValue: '',
-    encrypted: false,
-    category: 'window',
-    label: 'Skills Setup Window Bounds',
-    description: 'Saved position and size of skills setup window (JSON)',
-    type: 'string',
-  },
-
   // User Profile settings
   {
     key: 'profile.name',

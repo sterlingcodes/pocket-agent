@@ -152,7 +152,7 @@ type SDKOptions = {
   persistSession?: boolean;
   systemPrompt?: string | { type: 'preset'; preset: 'claude_code'; append?: string };
   mcpServers?: Record<string, unknown>;
-  settingSources?: ('project' | 'user')[];  // Load skills from .claude/skills/
+  settingSources?: ('project' | 'user')[];
   canUseTool?: CanUseToolCallback;  // Pre-tool-use validation callback
   hooks?: {
     PreToolUse?: Array<{ hooks: PreToolUseHookCallback[] }>;
@@ -823,7 +823,7 @@ class AgentManagerClass extends EventEmitter {
       ...(thinkingBudget !== undefined && thinkingBudget > 0 && { maxThinkingTokens: thinkingBudget }),
       abortController,
       tools: { type: 'preset', preset: 'claude_code' },
-      settingSources: ['project'],  // Load skills from .claude/skills/
+      settingSources: ['project'],
       canUseTool: buildCanUseToolCallback(),  // Pre-tool-use safety validation
       hooks: {
         PreToolUse: [buildPreToolUseHook()],  // Pre-tool-use safety hook
@@ -831,7 +831,6 @@ class AgentManagerClass extends EventEmitter {
       allowedTools: [
         // Built-in SDK tools
         'Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'WebSearch', 'WebFetch',
-        'Skill',  // Enable skills from .claude/skills/
         // Custom MCP tools - browser & system
         'mcp__pocket-agent__browser',
         'mcp__pocket-agent__notify',
