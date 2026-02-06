@@ -2275,17 +2275,25 @@
       try {
         const result = await window.pocketAgent.runCommand('which pocket');
         if (result && result.trim()) {
+          // pocket has no --version flag; extract version from binary with strings
           try {
-            const versionResult = await window.pocketAgent.runCommand('pocket --version');
+            const pocketPath = result.trim();
+            const versionResult = await window.pocketAgent.runCommand(
+              `strings "${pocketPath}" | grep -E '^v[0-9]+\\.[0-9]+\\.[0-9]+$' | head -1`
+            );
             if (versionResult && versionResult.trim()) {
               pocketCliInstalledVersion = versionResult.trim().replace(/^v/, '');
               versionEl.textContent = `v${pocketCliInstalledVersion}`;
+            } else {
+              versionEl.textContent = 'Installed';
             }
           } catch (e) {
-            versionEl.textContent = 'Unknown';
+            versionEl.textContent = 'Installed';
           }
           statusEl.className = 'status success';
           statusEl.textContent = 'Installed';
+          installBtn.style.display = 'none';
+          checkBtn.style.display = 'inline-block';
         } else {
           statusEl.className = 'status warning';
           statusEl.textContent = 'Not installed';
@@ -2371,7 +2379,10 @@
         statusEl.className = 'status info';
         statusEl.textContent = 'Installing...';
 
-        await window.pocketAgent.runCommand('curl -fsSL https://raw.githubusercontent.com/KenKaiii/pocket-agent-cli/main/scripts/install.sh | bash');
+        // Strip the 'exec' line from install script so the command returns cleanly
+        await window.pocketAgent.runCommand(
+          'curl -fsSL https://raw.githubusercontent.com/KenKaiii/pocket-agent-cli/main/scripts/install.sh | sed "s/^.*exec .*$//" | bash'
+        );
         await initPocketCli();
 
         if (document.getElementById('pocket-cli-status').classList.contains('success')) {
@@ -2403,7 +2414,10 @@
         infoBox.style.display = 'flex';
         infoText.textContent = 'Downloading and installing latest version...';
 
-        await window.pocketAgent.runCommand('curl -fsSL https://raw.githubusercontent.com/KenKaiii/pocket-agent-cli/main/scripts/install.sh | bash');
+        // Strip the 'exec' line from install script so the command returns cleanly
+        await window.pocketAgent.runCommand(
+          'curl -fsSL https://raw.githubusercontent.com/KenKaiii/pocket-agent-cli/main/scripts/install.sh | sed "s/^.*exec .*$//" | bash'
+        );
         await initPocketCli();
 
         if (document.getElementById('pocket-cli-status').classList.contains('success')) {

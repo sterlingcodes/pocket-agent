@@ -1408,7 +1408,7 @@ function setupIPC(): void {
     try {
       const { stdout } = await execAsync(command, {
         shell: '/bin/bash',
-        env: { ...process.env, PATH: `${process.env.PATH}:/usr/local/bin:/opt/homebrew/bin` },
+        env: { ...process.env, PATH: `${process.env.PATH}:/usr/local/bin:/opt/homebrew/bin:${process.env.HOME}/.local/bin` },
       });
       return stdout;
     } catch (error) {

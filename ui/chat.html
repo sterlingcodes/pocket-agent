@@ -1202,6 +1202,32 @@
       50% { transform: scale(1.02); }
     }
 
+    /* Pocket CLI active state - green/cyan vibe */
+    .status-indicator.pocket-cli-active {
+      border-color: #22c55e;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(103, 232, 249, 0.1) 100%);
+    }
+
+    .status-indicator.pocket-cli-active .status-action {
+      background: linear-gradient(
+        90deg,
+        #22c55e 0%,
+        #67e8f9 25%,
+        #22c55e 50%,
+        #67e8f9 75%,
+        #22c55e 100%
+      );
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+
+    .status-indicator.pocket-cli-active .status-detail {
+      color: #22c55e;
+    }
+
     .status-detail {
       font-size: 12px;
       color: var(--text-muted);
@@ -3601,6 +3627,7 @@
           detailEl.textContent = '';
           detailEl.style.display = 'none';
           statusEl.classList.remove('subagent-active');
+          statusEl.classList.remove('pocket-cli-active');
         }
       } else if (status.type === 'tool_start') {
         actionEl.textContent = status.toolName || 'pouncing on it...';
@@ -3613,6 +3640,11 @@
           detailEl.style.display = 'none';
         }
         statusEl.classList.remove('subagent-active');
+        if (status.isPocketCli) {
+          statusEl.classList.add('pocket-cli-active');
+        } else {
+          statusEl.classList.remove('pocket-cli-active');
+        }
       } else if (status.type === 'tool_end') {
         // Don't overwrite blocked state - keep showing the block message
         if (!statusEl.classList.contains('tool-blocked')) {
@@ -3620,6 +3652,7 @@
           detailEl.textContent = '';
           detailEl.style.display = 'none';
           statusEl.classList.remove('subagent-active');
+          statusEl.classList.remove('pocket-cli-active');
         }
       } else if (status.type === 'tool_blocked') {
         // Safety hook blocked a dangerous command
@@ -3634,9 +3667,11 @@
           detailEl.style.display = 'none';
         }
         statusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('pocket-cli-active');
       } else if (status.type === 'subagent_start') {
         // Subagent spawned - show special status
         statusEl.classList.add('subagent-active');
+        statusEl.classList.remove('pocket-cli-active');
         actionEl.textContent = status.message || 'summoning cat friends';
         if (status.toolInput) {
           const countBadge = status.agentCount > 1 ? ` (${status.agentCount} active)` : '';
@@ -3655,6 +3690,7 @@
       } else if (status.type === 'subagent_end') {
         // All subagents done
         statusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('pocket-cli-active');
         actionEl.textContent = status.message || 'cat squad finished! ✨';
         detailEl.textContent = '';
         detailEl.style.display = 'none';
@@ -3663,6 +3699,7 @@
         detailEl.textContent = '';
         detailEl.style.display = 'none';
         statusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('pocket-cli-active');
       } else if (status.type === 'queued') {
         // Message was queued - show queue position
         actionEl.textContent = status.message || 'in the litter queue 📋';
@@ -3674,6 +3711,7 @@
           detailEl.style.display = 'none';
         }
         statusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('pocket-cli-active');
       } else if (status.type === 'queue_processing') {
         // Now processing a queued message
         actionEl.textContent = status.message || 'digging it up now...';
@@ -3686,6 +3724,7 @@
           detailEl.style.display = 'none';
         }
         statusEl.classList.remove('subagent-active');
+        statusEl.classList.remove('pocket-cli-active');
 
         // Remove 'queued' class from the oldest queued message since it's now processing
         const queuedMsgs = messagesDiv.querySelectorAll('.message.queued');

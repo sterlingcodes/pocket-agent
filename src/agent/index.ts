@@ -125,6 +125,8 @@ export type AgentStatus = {
   queuedMessage?: string;
   // Safety blocking
   blockedReason?: string;
+  // Pocket CLI indicator
+  isPocketCli?: boolean;
 };
 
 // SDK types (loaded dynamically)
@@ -1145,6 +1147,16 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
                 agentCount: activeSubagents.size,
                 message: this.getSubagentMessage(agentType),
               });
+            } else if (rawName === 'Bash' && this.isPocketCliCommand(block.input)) {
+              const pocketName = this.formatPocketCommand(block.input);
+              this.emitStatus({
+                type: 'tool_start',
+                sessionId,
+                toolName: pocketName,
+                toolInput,
+                message: `batting at ${pocketName}...`,
+                isPocketCli: true,
+              });
             } else {
               this.emitStatus({
                 type: 'tool_start',
@@ -1320,6 +1332,29 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
     return '';
   }
 
+  private isPocketCliCommand(input: unknown): boolean {
+    if (!input || typeof input !== 'object') return false;
+    const command = (input as Record<string, unknown>).command;
+    if (typeof command !== 'string') return false;
+    return command.trimStart().startsWith('pocket');
+  }
+
+  private formatPocketCommand(input: unknown): string {
+    if (!input || typeof input !== 'object') return 'running pocket cli';
+    const command = ((input as Record<string, unknown>).command as string) || '';
+    const parts = command.trimStart().split(/\s+/);
+    const subcommand = parts[1] || '';
+    const categories: Record<string, string> = {
+      news: 'fetching the latest news',
+      utility: 'running pocket utility',
+      knowledge: 'checking the knowledge base',
+      dev: 'querying dev tools',
+      commands: 'listing pocket commands',
+      setup: 'configuring pocket',
+      integrations: 'checking integrations',
+    };
+    return categories[subcommand] || 'running pocket cli';
+  }
 
   private async createSummary(messages: Message[]): Promise<string> {
     if (messages.length === 0) {
