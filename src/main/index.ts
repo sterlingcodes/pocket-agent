@@ -1,7 +1,7 @@
-import { app, Tray, Menu, nativeImage, BrowserWindow, ipcMain, Notification, globalShortcut, shell, dialog, screen, powerMonitor, powerSaveBlocker } from 'electron';
+import { app, Tray, Menu, nativeImage, BrowserWindow, ipcMain, Notification, globalShortcut, shell, screen, powerMonitor, powerSaveBlocker, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { spawn, exec, ChildProcess } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
 import { AgentManager } from '../agent';
 import { MemoryManager } from '../memory';
@@ -10,6 +10,8 @@ import { createTelegramBot, TelegramBot } from '../channels/telegram';
 import { SettingsManager } from '../settings';
 import { loadIdentity, saveIdentity, getIdentityPath, DEFAULT_IDENTITY } from '../config/identity';
 import { loadInstructions, saveInstructions, getInstructionsPath, DEFAULT_INSTRUCTIONS } from '../config/instructions';
+import { DEFAULT_COMMANDS } from '../config/commands';
+import { loadWorkflowCommands } from '../config/commands-loader';
 import { closeTaskDb } from '../tools';
 import { initializeUpdater, setupUpdaterIPC, setSettingsWindow } from './updater';
 import cityTimezones from 'city-timezones';
@@ -179,7 +181,6 @@ let factsGraphWindow: BrowserWindow | null = null;
 let customizeWindow: BrowserWindow | null = null;
 let factsWindow: BrowserWindow | null = null;
 let soulWindow: BrowserWindow | null = null;
-let skillsSetupWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 
 /**
@@ -195,7 +196,7 @@ function getAgentWorkspace(): string {
 /**
  * Ensure the agent workspace directory exists.
  * Creates it if missing (on first run, after onboarding, or if deleted).
- * Sets up CLAUDE.md and .claude/skills for the SDK to load.
+ * Sets up CLAUDE.md and .claude/commands for the SDK to load.
  */
 function ensureAgentWorkspace(): string {
   const workspace = getAgentWorkspace();
@@ -253,6 +254,44 @@ function ensureAgentWorkspace(): string {
     fs.writeFileSync(claudeMdPath, DEFAULT_INSTRUCTIONS);
     console.log('[Main] Repopulated CLAUDE.md with latest defaults');
 
+    // Populate default workflow commands
+    // If .claude is a symlink from a previous install, replace it with a real directory
+    const workspaceClaudeDirForCmds = path.join(workspace, '.claude');
+    if (fs.existsSync(workspaceClaudeDirForCmds) && fs.lstatSync(workspaceClaudeDirForCmds).isSymbolicLink()) {
+      // Preserve any user-created commands from the symlink target before replacing
+      const symlinkCommandsDir = path.join(workspaceClaudeDirForCmds, 'commands');
+      const preservedCommands: Array<{ name: string; content: string }> = [];
+      if (fs.existsSync(symlinkCommandsDir)) {
+        const defaultFilenames = new Set(DEFAULT_COMMANDS.map(c => c.filename));
+        for (const file of fs.readdirSync(symlinkCommandsDir).filter(f => f.endsWith('.md'))) {
+          if (!defaultFilenames.has(file)) {
+            preservedCommands.push({ name: file, content: fs.readFileSync(path.join(symlinkCommandsDir, file), 'utf-8') });
+          }
+        }
+      }
+      fs.unlinkSync(workspaceClaudeDirForCmds);
+      fs.mkdirSync(workspaceClaudeDirForCmds, { recursive: true });
+      console.log('[Main] Replaced .claude symlink with real directory for commands');
+      // Restore preserved user commands
+      if (preservedCommands.length > 0) {
+        const restoredDir = path.join(workspaceClaudeDirForCmds, 'commands');
+        fs.mkdirSync(restoredDir, { recursive: true });
+        for (const cmd of preservedCommands) {
+          fs.writeFileSync(path.join(restoredDir, cmd.name), cmd.content);
+        }
+        console.log(`[Main] Preserved ${preservedCommands.length} user workflow command(s)`);
+      }
+    }
+    const commandsDir = path.join(workspaceClaudeDirForCmds, 'commands');
+    if (!fs.existsSync(commandsDir)) {
+      fs.mkdirSync(commandsDir, { recursive: true });
+    }
+    // Only write defaults — never delete existing user commands
+    for (const cmd of DEFAULT_COMMANDS) {
+      fs.writeFileSync(path.join(commandsDir, cmd.filename), cmd.content);
+    }
+    console.log(`[Main] Populated ${DEFAULT_COMMANDS.length} default workflow command(s)`);
+
     // Update version file
     fs.writeFileSync(versionFile, currentVersion);
     console.log(`[Main] Updated version file to v${currentVersion}`);
@@ -265,31 +304,22 @@ function ensureAgentWorkspace(): string {
     console.log('[Main] Created docs directory:', docsDir);
   }
 
-  // Ensure .claude folder is symlinked from source (for skills and commands)
+  // Clean up legacy .claude/skills folder (no longer used)
   const workspaceClaudeDir = path.join(workspace, '.claude');
-  const sourceClaudeDir = path.join(__dirname, '../../.claude');
-
-  if (fs.existsSync(sourceClaudeDir)) {
+  if (fs.existsSync(workspaceClaudeDir)) {
+    const workspaceSkillsDir = path.join(workspaceClaudeDir, 'skills');
     try {
-      if (!fs.existsSync(workspaceClaudeDir)) {
-        // Create symlink to source .claude folder
-        fs.symlinkSync(sourceClaudeDir, workspaceClaudeDir, 'dir');
-        console.log('[Main] Symlinked .claude folder to workspace');
-      } else {
-        // Check if it's already a symlink
-        const stats = fs.lstatSync(workspaceClaudeDir);
-        if (!stats.isSymbolicLink()) {
-          // Workspace has its own .claude folder - symlink skills subfolder instead
-          const workspaceSkillsDir = path.join(workspaceClaudeDir, 'skills');
-          const sourceSkillsDir = path.join(sourceClaudeDir, 'skills');
-          if (!fs.existsSync(workspaceSkillsDir) && fs.existsSync(sourceSkillsDir)) {
-            fs.symlinkSync(sourceSkillsDir, workspaceSkillsDir, 'dir');
-            console.log('[Main] Symlinked skills folder to workspace');
-          }
+      if (fs.existsSync(workspaceSkillsDir)) {
+        const stats = fs.lstatSync(workspaceSkillsDir);
+        if (stats.isSymbolicLink()) {
+          fs.unlinkSync(workspaceSkillsDir);
+        } else {
+          fs.rmSync(workspaceSkillsDir, { recursive: true, force: true });
         }
+        console.log('[Main] Removed legacy .claude/skills folder');
       }
     } catch (err) {
-      console.warn('[Main] Failed to setup .claude symlink:', err);
+      console.warn('[Main] Failed to remove legacy .claude/skills:', err);
     }
   }
 
@@ -439,10 +469,6 @@ function updateTrayMenu(): void {
       label: 'Tweaks...',
       click: () => openSettingsWindow(),
       accelerator: 'CmdOrCtrl+,',
-    },
-    {
-      label: 'Superpowers...',
-      click: () => createSkillsSetupWindow(),
     },
     {
       label: 'Check for Updates...',
@@ -947,58 +973,6 @@ function openSoulWindow(): void {
   });
 }
 
-function createSkillsSetupWindow(): void {
-  if (skillsSetupWindow && !skillsSetupWindow.isDestroyed()) {
-    skillsSetupWindow.focus();
-    return;
-  }
-
-  const savedBoundsJson = SettingsManager.get('window.skillsSetupBounds');
-  let windowOptions: Electron.BrowserWindowConstructorOptions = {
-    width: 900,
-    height: 700,
-    title: 'Superpowers - Pocket Agent',
-    backgroundColor: '#0a0a0b',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-    show: false,
-  };
-
-  if (savedBoundsJson) {
-    try {
-      const savedBounds = JSON.parse(savedBoundsJson);
-      if (savedBounds.x !== undefined) windowOptions.x = savedBounds.x;
-      if (savedBounds.y !== undefined) windowOptions.y = savedBounds.y;
-      if (savedBounds.width) windowOptions.width = savedBounds.width;
-      if (savedBounds.height) windowOptions.height = savedBounds.height;
-    } catch { /* ignore */ }
-  }
-
-  skillsSetupWindow = new BrowserWindow(windowOptions);
-
-  skillsSetupWindow.loadFile(path.join(__dirname, '../../ui/skills-setup.html'));
-
-  skillsSetupWindow.once('ready-to-show', () => {
-    skillsSetupWindow?.show();
-  });
-
-  const saveBounds = () => {
-    if (skillsSetupWindow && !skillsSetupWindow.isDestroyed()) {
-      SettingsManager.set('window.skillsSetupBounds', JSON.stringify(skillsSetupWindow.getBounds()));
-    }
-  };
-  skillsSetupWindow.on('moved', saveBounds);
-  skillsSetupWindow.on('resized', saveBounds);
-  skillsSetupWindow.on('close', saveBounds);
-
-  skillsSetupWindow.on('closed', () => {
-    skillsSetupWindow = null;
-  });
-}
-
 function showNotification(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title, body }).show();
@@ -1026,7 +1000,11 @@ function setupIPC(): void {
   ipcMain.handle('agent:send', async (event, message: string, sessionId?: string) => {
     console.log(`[IPC] agent:send received sessionId: ${sessionId}`);
     // Set up status listener to forward to renderer
-    const statusHandler = (status: { type: string; toolName?: string; toolInput?: string; message?: string }) => {
+    const effectiveSessionId = sessionId || 'default';
+    const statusHandler = (status: { type: string; sessionId?: string; toolName?: string; toolInput?: string; message?: string }) => {
+      // Only forward status events for this session (or events without sessionId for backward compat)
+      if (status.sessionId && status.sessionId !== effectiveSessionId) return;
+
       // Send status update to the chat window that initiated the request
       const webContents = event.sender;
       if (!webContents.isDestroyed()) {
@@ -1041,7 +1019,6 @@ function setupIPC(): void {
       updateTrayMenu();
 
       // Sync to Telegram (Desktop -> Telegram) - only to the linked chat for this session
-      const effectiveSessionId = sessionId || 'default';
       const linkedChatId = memory?.getChatForSession(effectiveSessionId);
       console.log('[Main] Checking telegram sync - bot exists:', !!telegramBot, 'session:', effectiveSessionId, 'linked chat:', linkedChatId);
       if (telegramBot && linkedChatId) {
@@ -1514,7 +1491,7 @@ function setupIPC(): void {
     try {
       const { stdout } = await execAsync(command, {
         shell: '/bin/bash',
-        env: { ...process.env, PATH: `${process.env.PATH}:/usr/local/bin:/opt/homebrew/bin` },
+        env: { ...process.env, PATH: `${process.env.PATH}:/usr/local/bin:/opt/homebrew/bin:${process.env.HOME}/.local/bin` },
       });
       return stdout;
     } catch (error) {
@@ -1522,6 +1499,11 @@ function setupIPC(): void {
       console.error('[Shell] Command failed:', errorMsg);
       throw error;
     }
+  });
+
+  // Commands (Workflows)
+  ipcMain.handle('commands:list', async () => {
+    return loadWorkflowCommands();
   });
 
   // File attachments
@@ -1556,281 +1538,6 @@ function setupIPC(): void {
     }
   });
 
-  // Skills
-  ipcMain.handle('skills:getStatus', async () => {
-    const {
-      loadSkillsManifest,
-      getAllSkillStatuses,
-      getSkillsSummary,
-      checkPrerequisites,
-    } = await import('../skills');
-
-    const projectRoot = app.isPackaged
-      ? path.join(process.resourcesPath, 'app')
-      : path.join(__dirname, '../..');
-    const skillsDir = path.join(projectRoot, '.claude');
-
-    const manifest = loadSkillsManifest(skillsDir);
-    if (!manifest) {
-      return {
-        skills: [],
-        summary: { total: 0, available: 0, unavailable: 0, incompatible: 0 },
-        prerequisites: checkPrerequisites(),
-      };
-    }
-
-    const skills = getAllSkillStatuses(manifest);
-    const summary = getSkillsSummary(manifest);
-    const prerequisites = checkPrerequisites();
-
-    return { skills, summary, prerequisites };
-  });
-
-  ipcMain.handle('skills:install', async (_, skillName: string) => {
-    const {
-      loadSkillsManifest,
-      getSkillStatus,
-      installSkillDependencies,
-    } = await import('../skills');
-
-    const projectRoot = app.isPackaged
-      ? path.join(process.resourcesPath, 'app')
-      : path.join(__dirname, '../..');
-    const skillsDir = path.join(projectRoot, '.claude');
-
-    const manifest = loadSkillsManifest(skillsDir);
-    if (!manifest || !manifest.skills[skillName]) {
-      return { success: false, installed: [], failed: ['Skill not found'] };
-    }
-
-    const status = getSkillStatus(skillName, manifest.skills[skillName]);
-    const result = await installSkillDependencies(status, (msg) => {
-      console.log(`[Skills] ${skillName}: ${msg}`);
-    });
-
-    return result;
-  });
-
-  ipcMain.handle('skills:uninstall', async (_, skillName: string) => {
-    const {
-      loadSkillsManifest,
-      getSkillStatus,
-      uninstallSkillDependencies,
-    } = await import('../skills');
-
-    const projectRoot = app.isPackaged
-      ? path.join(process.resourcesPath, 'app')
-      : path.join(__dirname, '../..');
-    const skillsDir = path.join(projectRoot, '.claude');
-
-    const manifest = loadSkillsManifest(skillsDir);
-    if (!manifest || !manifest.skills[skillName]) {
-      return { success: false, removed: [], failed: ['Skill not found'] };
-    }
-
-    const status = getSkillStatus(skillName, manifest.skills[skillName]);
-    const result = await uninstallSkillDependencies(status, (msg) => {
-      console.log(`[Skills] ${skillName}: ${msg}`);
-    });
-
-    return result;
-  });
-
-  ipcMain.handle('skills:openPermissionSettings', async (_, permissionType: string) => {
-    const { openPermissionSettings } = await import('../permissions/macos');
-    await openPermissionSettings(permissionType as Parameters<typeof openPermissionSettings>[0]);
-  });
-
-  ipcMain.handle('skills:checkPermission', async (_, permissionType: string) => {
-    const { getPermissionStatus } = await import('../permissions/macos');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return getPermissionStatus(permissionType as any);
-  });
-
-  ipcMain.handle('app:openSkillsSetup', async () => {
-    createSkillsSetupWindow();
-  });
-
-  // Skill setup handlers
-  ipcMain.handle('skills:getSetupConfig', async (_, skillName: string) => {
-    const { loadSkillsManifest } = await import('../skills');
-
-    const projectRoot = app.isPackaged
-      ? path.join(process.resourcesPath, 'app')
-      : path.join(__dirname, '../..');
-    const skillsDir = path.join(projectRoot, '.claude');
-
-    const manifest = loadSkillsManifest(skillsDir);
-    if (!manifest || !manifest.skills[skillName]) {
-      return { found: false };
-    }
-
-    const skill = manifest.skills[skillName];
-    return {
-      found: true,
-      setup: skill.setup || undefined,
-    };
-  });
-
-  // File dialog for skill setup (e.g., uploading credentials files)
-  ipcMain.handle(
-    'skills:selectFile',
-    async (_, options: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) => {
-      const result = await dialog.showOpenDialog({
-        title: options.title || 'Select File',
-        properties: ['openFile'],
-        filters: options.filters || [{ name: 'All Files', extensions: ['*'] }],
-      });
-
-      if (result.canceled || result.filePaths.length === 0) {
-        return { success: false, canceled: true };
-      }
-
-      return { success: true, filePath: result.filePaths[0] };
-    }
-  );
-
-  // Secure setup command execution - validates against manifest and sanitizes inputs
-  ipcMain.handle(
-    'skills:runSetupCommand',
-    async (
-      _,
-      params: { skillName: string; stepId: string; inputs?: Record<string, string> }
-    ) => {
-      const { loadSkillsManifest } = await import('../skills');
-
-      // Load manifest and validate skill exists
-      const projectRoot = app.isPackaged
-        ? path.join(process.resourcesPath, 'app')
-        : path.join(__dirname, '../..');
-      const skillsDir = path.join(projectRoot, '.claude');
-      const manifest = loadSkillsManifest(skillsDir);
-
-      if (!manifest || !manifest.skills[params.skillName]) {
-        return { success: false, error: 'Skill not found', output: '' };
-      }
-
-      const skill = manifest.skills[params.skillName];
-      if (!skill.setup || !skill.setup.steps) {
-        return { success: false, error: 'Skill has no setup steps', output: '' };
-      }
-
-      // Find the step
-      const step = skill.setup.steps.find(
-        (s: { id: string }) => s.id === params.stepId
-      );
-      if (!step || !step.command) {
-        return { success: false, error: 'Step not found or has no command', output: '' };
-      }
-
-      // Build command with sanitized input substitutions
-      let commandTemplate = step.command as string;
-      const inputs = params.inputs || {};
-
-      // Validate inputs don't contain shell metacharacters
-      const shellMetaChars = /[;&|`$(){}[\]<>\\!#*?"'\n\r]/;
-      for (const [key, value] of Object.entries(inputs)) {
-        if (shellMetaChars.test(value)) {
-          return {
-            success: false,
-            error: `Invalid characters in input "${key}"`,
-            output: '',
-          };
-        }
-        // Only substitute if the placeholder exists in template
-        if (commandTemplate.includes(`{{${key}}}`)) {
-          commandTemplate = commandTemplate.replace(
-            new RegExp(`\\{\\{${key}\\}\\}`, 'g'),
-            value
-          );
-        }
-      }
-
-      // Check for any remaining unsubstituted placeholders
-      if (/\{\{[^}]+\}\}/.test(commandTemplate)) {
-        return {
-          success: false,
-          error: 'Missing required inputs',
-          output: '',
-        };
-      }
-
-      // Parse command into binary and args (simple shell-like parsing)
-      const parts = commandTemplate.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
-      if (parts.length === 0) {
-        return { success: false, error: 'Empty command', output: '' };
-      }
-
-      const binary = parts[0] as string;
-      const args = parts.slice(1).map((arg) => {
-        // Remove surrounding quotes if present
-        if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
-          return arg.slice(1, -1);
-        }
-        return arg;
-      });
-
-      // Add common paths for homebrew, go, npm binaries, and node version managers
-      const home = process.env.HOME || '';
-      const extraPaths = [
-        '/opt/homebrew/bin',
-        '/usr/local/bin',
-        `${home}/go/bin`,
-        `${home}/.npm-global/bin`,
-        `${home}/.local/bin`,
-        // Node version managers (NVM paths cached at startup)
-        ...cachedNvmPaths,
-        `${home}/.nodenv/shims`,                     // nodenv
-        `${home}/.asdf/shims`,                       // asdf
-        `${home}/.volta/bin`,                        // Volta
-        `${home}/.fnm/current/bin`,                  // fnm
-      ].join(':');
-
-      // Get API keys from settings to pass as environment variables
-      const { SettingsManager } = await import('../settings');
-      const apiKeysEnv = SettingsManager.getApiKeysAsEnv();
-
-      return new Promise<{ success: boolean; output: string; error?: string }>((resolve) => {
-        let stdout = '';
-        let stderr = '';
-
-        const child: ChildProcess = spawn(binary, args, {
-          env: {
-            ...process.env,
-            ...apiKeysEnv, // Include API keys from settings
-            PATH: `${extraPaths}:${process.env.PATH}`,
-          },
-          timeout: 60000,
-          shell: false, // Explicitly disable shell to prevent injection
-        });
-
-        child.stdout?.on('data', (data: Buffer) => {
-          stdout += data.toString();
-        });
-
-        child.stderr?.on('data', (data: Buffer) => {
-          stderr += data.toString();
-        });
-
-        child.on('error', (error: Error) => {
-          resolve({
-            success: false,
-            error: error.message,
-            output: [stdout, stderr].filter(Boolean).join('\n'),
-          });
-        });
-
-        child.on('close', (code: number | null) => {
-          const output = [stdout, stderr].filter(Boolean).join('\n');
-          resolve({
-            success: code === 0,
-            output,
-            ...(code !== 0 && { error: `Command exited with code ${code}` }),
-          });
-        });
-      });
-    }
-  );
 }
 
 // ============ Agent Lifecycle ============

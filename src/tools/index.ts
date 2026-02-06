@@ -36,7 +36,7 @@ export { getSchedulerTools } from './scheduler-tools';
 export { getCalendarTools } from './calendar-tools';
 export { getTaskTools, closeTaskDb } from './task-tools';
 export { showNotification } from './macos';
-export { setCurrentSessionId, getCurrentSessionId } from './session-context';
+export { setCurrentSessionId, getCurrentSessionId, runWithSessionId } from './session-context';
 
 export interface MCPServerConfig {
   command: string;
