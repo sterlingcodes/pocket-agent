@@ -11,23 +11,25 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
-      --bg-primary: #0a0a0b;
-      --bg-secondary: #141415;
-      --bg-tertiary: #1c1c1e;
-      --border: #2a2a2d;
-      --text-primary: #fafafa;
-      --text-secondary: #a1a1a6;
-      --text-muted: #636366;
-      --accent: #a855f7;
-      --accent-secondary: #ec4899;
-      --accent-hover: #c084fc;
-      --user-bubble: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
-      --user-bubble-solid: #a855f7;
-      --assistant-bubble: #1c1c1e;
+      /* CLAWD Command Center Color Scheme - Dark Slate Blue + Emerald */
+      --bg-primary: #0f172a;      /* CLAWD dark slate blue background */
+      --bg-secondary: #1e293b;    /* CLAWD slate surface */
+      --bg-tertiary: #334155;     /* CLAWD slate hover */
+      --border: #334155;          /* slate-700 */
+      --border-subtle: #475569;   /* slate-600 */
+      --text-primary: #f1f5f9;    /* CLAWD foreground - slate-100 */
+      --text-secondary: #94a3b8;  /* slate-400 */
+      --text-muted: #64748b;      /* slate-500 */
+      --accent: #10b981;          /* CLAWD emerald accent */
+      --accent-secondary: #34d399; /* CLAWD emerald hover */
+      --accent-hover: #6ee7b7;    /* emerald-300 */
+      --user-bubble: #0369a1;
+      --user-bubble-solid: #047857;
+      --assistant-bubble: #1e293b;
       --error: #ef4444;
       --success: #22c55e;
-      --radius: 20px;
-      --radius-sm: 10px;
+      --radius: 16px;
+      --radius-sm: 8px;
     }
 
     * {
@@ -785,7 +787,7 @@
       font-weight: 600;
       letter-spacing: 0.3px;
       color: #ffffff;
-      background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       padding: 2px 6px;
       border-radius: 4px;
     }
@@ -1127,24 +1129,24 @@
       100% { background-position: -100% 0; }
     }
 
-    /* Subagent active state - purple/pink vibe */
+    /* Subagent active state - emerald glow */
     .status-indicator.subagent-active {
-      border-color: #a855f7;
-      background: linear-gradient(135deg, rgba(168, 85, 247, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+      border-color: #10b981;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(52, 211, 153, 0.1) 100%);
     }
 
     .status-indicator.subagent-active .status-spinner {
-      /* Pixel cat already uses --accent which is purple */
+      /* Uses --accent which is emerald */
     }
 
     .status-indicator.subagent-active .status-action {
       background: linear-gradient(
         90deg,
-        #a855f7 0%,
-        #ec4899 25%,
-        #a855f7 50%,
-        #ec4899 75%,
-        #a855f7 100%
+        #10b981 0%,
+        #34d399 25%,
+        #10b981 50%,
+        #34d399 75%,
+        #10b981 100%
       );
       background-size: 200% 100%;
       -webkit-background-clip: text;
@@ -1583,20 +1585,20 @@
         0 4px 0 var(--accent), 4px 4px 0 var(--accent), 8px 4px 0 var(--accent), 12px 4px 0 var(--accent),
         16px 4px 0 var(--accent-secondary), 20px 4px 0 var(--accent-secondary), 24px 4px 0 var(--accent-secondary), 28px 4px 0 var(--accent-secondary),
         /* Row 3 */
-        0 8px 0 var(--accent), 4px 8px 0 var(--accent), 8px 8px 0 var(--accent), 12px 8px 0 #c084fc,
-        16px 8px 0 #c084fc, 20px 8px 0 var(--accent-secondary), 24px 8px 0 var(--accent-secondary), 28px 8px 0 var(--accent-secondary),
+        0 8px 0 var(--accent), 4px 8px 0 var(--accent), 8px 8px 0 var(--accent), 12px 8px 0 #6ee7b7,
+        16px 8px 0 #6ee7b7, 20px 8px 0 var(--accent-secondary), 24px 8px 0 var(--accent-secondary), 28px 8px 0 var(--accent-secondary),
         /* Row 4 */
-        0 12px 0 var(--accent), 4px 12px 0 var(--accent), 8px 12px 0 #c084fc, 12px 12px 0 #c084fc,
-        16px 12px 0 #c084fc, 20px 12px 0 #c084fc, 24px 12px 0 var(--accent-secondary), 28px 12px 0 var(--accent-secondary),
+        0 12px 0 var(--accent), 4px 12px 0 var(--accent), 8px 12px 0 #6ee7b7, 12px 12px 0 #6ee7b7,
+        16px 12px 0 #6ee7b7, 20px 12px 0 #6ee7b7, 24px 12px 0 var(--accent-secondary), 28px 12px 0 var(--accent-secondary),
         /* Row 5 */
-        4px 16px 0 var(--accent), 8px 16px 0 #c084fc, 12px 16px 0 #c084fc,
-        16px 16px 0 #c084fc, 20px 16px 0 #c084fc, 24px 16px 0 var(--accent-secondary),
+        4px 16px 0 var(--accent), 8px 16px 0 #6ee7b7, 12px 16px 0 #6ee7b7,
+        16px 16px 0 #6ee7b7, 20px 16px 0 #6ee7b7, 24px 16px 0 var(--accent-secondary),
         /* Row 6 */
-        8px 20px 0 #c084fc, 12px 20px 0 #c084fc, 16px 20px 0 #c084fc, 20px 20px 0 #c084fc,
+        8px 20px 0 #6ee7b7, 12px 20px 0 #6ee7b7, 16px 20px 0 #6ee7b7, 20px 20px 0 #6ee7b7,
         /* Row 7 */
-        12px 24px 0 #c084fc, 16px 24px 0 #c084fc,
+        12px 24px 0 #6ee7b7, 16px 24px 0 #6ee7b7,
         /* Row 8 - tip */
-        14px 28px 0 #c084fc;
+        14px 28px 0 #6ee7b7;
     }
 
     @keyframes pixelheart-pulse {

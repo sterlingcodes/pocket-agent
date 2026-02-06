@@ -11,16 +11,16 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     :root {
-      --bg-primary: #0a0a0b;
-      --bg-secondary: #141415;
-      --bg-tertiary: #1c1c1e;
-      --border: #2a2a2d;
-      --text-primary: #fafafa;
-      --text-secondary: #a1a1a6;
-      --text-muted: #636366;
-      --accent: #a855f7;
-      --accent-secondary: #ec4899;
-      --accent-hover: #c084fc;
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --border: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #22c55e;
+      --accent-secondary: #10b981;
+      --accent-hover: #16a34a;
       --radius: 18px;
       --radius-sm: 10px;
     }
@@ -221,7 +221,7 @@
 
     .link-sample.solid path { stroke: var(--text-muted); stroke-width: 2; fill: none; }
     .link-sample.dashed path {
-      stroke: #a855f7;
+      stroke: #22c55e;
       stroke-width: 2;
       stroke-dasharray: 4 2;
       fill: none;
@@ -337,7 +337,7 @@
     }
 
     .link.category { stroke: #4a4a55; }
-    .link.semantic { stroke: #a855f7; stroke-dasharray: 5, 3; }
+    .link.semantic { stroke: #22c55e; stroke-dasharray: 5, 3; }
     .link.keyword { stroke: #3a3a45; stroke-dasharray: 2, 2; stroke-opacity: 0.4; }
 
     .link.highlighted {
@@ -599,11 +599,11 @@
         </filter>
 
         <!-- Radial gradients for each category - translucent jelly-like amoeba colors -->
-        <radialGradient id="amoeba-gradient-purple" cx="30%" cy="30%" r="70%" fx="20%" fy="20%">
-          <stop offset="0%" stop-color="#e9d5ff" stop-opacity="0.7"/>
-          <stop offset="30%" stop-color="#c084fc" stop-opacity="0.45"/>
-          <stop offset="60%" stop-color="#a855f7" stop-opacity="0.25"/>
-          <stop offset="100%" stop-color="#7c3aed" stop-opacity="0.08"/>
+        <radialGradient id="amoeba-gradient-cyan" cx="30%" cy="30%" r="70%" fx="20%" fy="20%">
+          <stop offset="0%" stop-color="#cffafe" stop-opacity="0.7"/>
+          <stop offset="30%" stop-color="#22d3ee" stop-opacity="0.45"/>
+          <stop offset="60%" stop-color="#06b6d4" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#0891b2" stop-opacity="0.08"/>
         </radialGradient>
         <radialGradient id="amoeba-gradient-green" cx="30%" cy="30%" r="70%" fx="20%" fy="20%">
           <stop offset="0%" stop-color="#bbf7d0" stop-opacity="0.7"/>
@@ -674,19 +674,19 @@
 
     // Category colors
     const CATEGORY_COLORS = {
-      user_info: '#a855f7',
+      user_info: '#06b6d4',
       preferences: '#22c55e',
       projects: '#f59e0b',
-      people: '#ec4899',
+      people: '#f472b6',
       work: '#8b5cf6',
-      notes: '#6b7280',
+      notes: '#64748b',
       decisions: '#ef4444',
       other: '#14b8a6'
     };
 
     // Category to gradient mapping
     const CATEGORY_GRADIENTS = {
-      user_info: 'url(#amoeba-gradient-purple)',
+      user_info: 'url(#amoeba-gradient-cyan)',
       preferences: 'url(#amoeba-gradient-green)',
       projects: 'url(#amoeba-gradient-orange)',
       people: 'url(#amoeba-gradient-pink)',
