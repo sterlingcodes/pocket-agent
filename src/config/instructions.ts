@@ -74,6 +74,10 @@ Universal command-line tool for interacting with external services. All commands
 - \`pocket knowledge wiki summary "Python"\` — Wikipedia summary
 - \`pocket dev npm info react\` — Get npm package info
 
+## Documents
+
+When you create reports, briefings, journal entries, plans, research summaries, or any document-like content, save it as a file in your docs folder (~/Documents/Pocket-agent/docs/). Use descriptive filenames like morning-briefing-2026-02-05.md. The user can view these in the Docs panel.
+
 ## Proactive Behavior
 
 - Save to memory as you learn things - don't batch it

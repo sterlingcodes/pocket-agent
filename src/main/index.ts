@@ -258,6 +258,13 @@ function ensureAgentWorkspace(): string {
     console.log(`[Main] Updated version file to v${currentVersion}`);
   }
 
+  // Ensure docs directory exists
+  const docsDir = path.join(workspace, 'docs');
+  if (!fs.existsSync(docsDir)) {
+    fs.mkdirSync(docsDir, { recursive: true });
+    console.log('[Main] Created docs directory:', docsDir);
+  }
+
   // Ensure .claude folder is symlinked from source (for skills and commands)
   const workspaceClaudeDir = path.join(workspace, '.claude');
   const sourceClaudeDir = path.join(__dirname, '../../.claude');
@@ -1146,6 +1153,78 @@ function setupIPC(): void {
     if (!memory) return { success: false };
     const success = memory.deleteSoulAspectById(id);
     return { success };
+  });
+
+  // Documents
+  ipcMain.handle('docs:list', async () => {
+    const docsDir = path.join(getAgentWorkspace(), 'docs');
+    if (!fs.existsSync(docsDir)) return [];
+    const files = fs.readdirSync(docsDir);
+    return files
+      .filter(f => !f.startsWith('.'))
+      .map(filename => {
+        const filePath = path.join(docsDir, filename);
+        const stats = fs.statSync(filePath);
+        const ext = path.extname(filename).slice(1).toLowerCase();
+        return {
+          filename,
+          file_type: ext || 'unknown',
+          file_path: filePath,
+          size_bytes: stats.size,
+          created_at: stats.birthtime.toISOString(),
+          modified_at: stats.mtime.toISOString(),
+        };
+      })
+      .sort((a, b) => new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime());
+  });
+
+  ipcMain.handle('docs:read', async (_, filePath: string) => {
+    const docsDir = path.join(getAgentWorkspace(), 'docs');
+    const resolved = path.resolve(filePath);
+    if (!resolved.startsWith(docsDir)) {
+      return { success: false, error: 'Access denied' };
+    }
+    if (!fs.existsSync(resolved)) {
+      return { success: false, error: 'File not found' };
+    }
+    const content = fs.readFileSync(resolved, 'utf-8');
+    return { success: true, content };
+  });
+
+  ipcMain.handle('docs:open-external', async (_, filePath: string) => {
+    await shell.openPath(filePath);
+    return { success: true };
+  });
+
+  ipcMain.handle('docs:import', async () => {
+    const docsDir = path.join(getAgentWorkspace(), 'docs');
+    const result = await dialog.showOpenDialog({
+      title: 'Add Document',
+      properties: ['openFile', 'multiSelections'],
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, canceled: true };
+    }
+    const imported: string[] = [];
+    for (const srcPath of result.filePaths) {
+      const filename = path.basename(srcPath);
+      const destPath = path.join(docsDir, filename);
+      fs.copyFileSync(srcPath, destPath);
+      imported.push(filename);
+    }
+    return { success: true, imported };
+  });
+
+  ipcMain.handle('docs:delete', async (_, filePath: string) => {
+    const docsDir = path.join(getAgentWorkspace(), 'docs');
+    const resolved = path.resolve(filePath);
+    if (!resolved.startsWith(docsDir)) {
+      return { success: false, error: 'Access denied' };
+    }
+    if (fs.existsSync(resolved)) {
+      fs.unlinkSync(resolved);
+    }
+    return { success: true };
   });
 
   ipcMain.handle('app:openFactsGraph', async () => {

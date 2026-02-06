@@ -121,6 +121,13 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   selectFile: (options?: { title?: string; filters?: Array<{ name: string; extensions: string[] }> }) =>
     ipcRenderer.invoke('skills:selectFile', options || {}),
 
+  // Documents
+  listDocuments: () => ipcRenderer.invoke('docs:list'),
+  readDocument: (filePath: string) => ipcRenderer.invoke('docs:read', filePath),
+  openDocumentExternal: (filePath: string) => ipcRenderer.invoke('docs:open-external', filePath),
+  importDocument: () => ipcRenderer.invoke('docs:import'),
+  deleteDocument: (filePath: string) => ipcRenderer.invoke('docs:delete', filePath),
+
   // Updates
   checkForUpdates: () => ipcRenderer.invoke('updater:checkForUpdates'),
   downloadUpdate: () => ipcRenderer.invoke('updater:downloadUpdate'),
@@ -276,6 +283,19 @@ declare global {
         };
       }>;
       runSkillSetupCommand: (command: string) => Promise<{ success: boolean; output?: string; error?: string }>;
+      // Documents
+      listDocuments: () => Promise<Array<{
+        filename: string;
+        file_type: string;
+        file_path: string;
+        size_bytes: number;
+        created_at: string;
+        modified_at: string;
+      }>>;
+      readDocument: (filePath: string) => Promise<{ success: boolean; content?: string; error?: string }>;
+      openDocumentExternal: (filePath: string) => Promise<{ success: boolean }>;
+      importDocument: () => Promise<{ success: boolean; canceled?: boolean; imported?: string[] }>;
+      deleteDocument: (filePath: string) => Promise<{ success: boolean }>;
       // Updates
       checkForUpdates: () => Promise<{ status: string; info?: { version: string }; error?: string }>;
       downloadUpdate: () => Promise<{ success: boolean; error?: string }>;

@@ -35,7 +35,11 @@
 
     body {
       font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg-primary);
+      background:
+        radial-gradient(ellipse at top right, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        radial-gradient(circle, rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+        var(--bg-primary);
+      background-size: 100% 100%, 24px 24px, 100% 100%;
       color: var(--text-primary);
       height: 100vh;
       display: flex;

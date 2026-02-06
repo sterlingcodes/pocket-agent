@@ -33,7 +33,11 @@
 
     body {
       font-family: 'Sora', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg-primary);
+      background:
+        radial-gradient(ellipse at top right, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
+        radial-gradient(circle, rgba(148, 163, 184, 0.07) 1px, transparent 1px),
+        var(--bg-primary);
+      background-size: 100% 100%, 24px 24px, 100% 100%;
       color: var(--text-primary);
       height: 100vh;
       display: flex;
@@ -234,18 +238,17 @@
       opacity: 0.6;
     }
 
-    /* Graph Container - Subtle petri dish effect */
+    /* Graph Container */
     #graph-container {
       flex: 1;
       position: relative;
       overflow: hidden;
       background:
-        /* Very soft center glow */
         radial-gradient(ellipse 120% 120% at 50% 50%,
-          rgba(25, 27, 35, 1) 0%,
-          rgba(16, 17, 22, 1) 40%,
-          rgba(10, 10, 14, 1) 100%);
-      background-color: #0a0a0e;
+          var(--bg-secondary) 0%,
+          var(--bg-primary) 40%,
+          #0b1120 100%);
+      background-color: var(--bg-primary);
     }
 
     /* Soft vignette - very gradual fade */
@@ -256,8 +259,8 @@
       background: radial-gradient(ellipse 100% 100% at 50% 50%,
         transparent 0%,
         transparent 30%,
-        rgba(0, 0, 0, 0.15) 60%,
-        rgba(0, 0, 0, 0.4) 100%);
+        rgba(0, 0, 0, 0.1) 60%,
+        rgba(0, 0, 0, 0.25) 100%);
       pointer-events: none;
       z-index: 1;
     }
@@ -355,7 +358,7 @@
     /* Tooltip */
     .tooltip {
       position: absolute;
-      background: rgba(28, 28, 30, 0.95);
+      background: rgba(15, 23, 42, 0.95);
       backdrop-filter: blur(8px);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
@@ -396,7 +399,7 @@
       bottom: 16px;
       left: 16px;
       right: 16px;
-      background: rgba(20, 20, 21, 0.95);
+      background: rgba(15, 23, 42, 0.95);
       backdrop-filter: blur(12px);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -501,7 +504,7 @@
       bottom: 16px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(28, 28, 30, 0.9);
+      background: rgba(15, 23, 42, 0.9);
       backdrop-filter: blur(8px);
       border: 1px solid var(--border);
       border-radius: 20px;
