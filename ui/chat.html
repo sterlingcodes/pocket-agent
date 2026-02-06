@@ -2989,10 +2989,9 @@
       // Set up status listener for this session (only if not already set up)
       if (!statusCleanupBySession.has(sessionId)) {
         const statusCleanup = window.pocketAgent.onStatus((status) => {
-          // Only update status if we're still on the same session
-          if (currentSessionId === sessionId) {
-            updateStatusIndicator(status, sessionId);
-          }
+          // Backend already filters events by session, so always update
+          // the correct session's indicator (even if user switched tabs)
+          updateStatusIndicator(status, sessionId);
         });
         statusCleanupBySession.set(sessionId, statusCleanup);
       }
@@ -3017,31 +3016,34 @@
         const pendingMsgs = pendingUserMessagesBySession.get(sessionId);
         if (pendingMsgs) pendingMsgs.delete(messageId);
 
-        // Only update UI if still on same session
-        if (currentSessionId === sessionId) {
-          // Check if there are more queued messages - if not, clean up
-          const hasMoreQueued = queuedMessageElements.size > 0;
+        // Clean up loading state regardless of which tab is active
+        // (otherwise indicators persist if user switched tabs mid-query)
+        const hasMoreQueued = queuedMessageElements.size > 0;
 
-          if (!hasMoreQueued) {
-            // Clean up status listener
-            const cleanup = statusCleanupBySession.get(sessionId);
-            if (cleanup) {
-              cleanup();
-              statusCleanupBySession.delete(sessionId);
-            }
-
-            // Remove status indicator
-            const currentStatusEl = statusElBySession.get(sessionId);
-            if (currentStatusEl) {
-              currentStatusEl.remove();
-              statusElBySession.delete(sessionId);
-            }
-
-            isLoadingBySession.set(sessionId, false);
-            renderTabs();
-            setButtonState(false);
+        if (!hasMoreQueued) {
+          // Clean up status listener
+          const cleanup = statusCleanupBySession.get(sessionId);
+          if (cleanup) {
+            cleanup();
+            statusCleanupBySession.delete(sessionId);
           }
 
+          // Remove status indicator
+          const currentStatusEl = statusElBySession.get(sessionId);
+          if (currentStatusEl) {
+            currentStatusEl.remove();
+            statusElBySession.delete(sessionId);
+          }
+
+          isLoadingBySession.set(sessionId, false);
+          renderTabs();
+          if (currentSessionId === sessionId) {
+            setButtonState(false);
+          }
+        }
+
+        // Only update visible UI if still on same session
+        if (currentSessionId === sessionId) {
           if (result.success) {
             addMessage('assistant', result.response);
 

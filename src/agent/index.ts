@@ -1,5 +1,5 @@
 import { MemoryManager, Message, SmartContextOptions } from '../memory';
-import { buildMCPServers, buildSdkMcpServers, setMemoryManager, setSoulMemoryManager, ToolsConfig, validateToolsConfig, setCurrentSessionId } from '../tools';
+import { buildMCPServers, buildSdkMcpServers, setMemoryManager, setSoulMemoryManager, ToolsConfig, validateToolsConfig, runWithSessionId, getCurrentSessionId } from '../tools';
 import { closeBrowserManager } from '../browser';
 import { loadIdentity } from '../config/identity';
 import { loadInstructions } from '../config/instructions';
@@ -112,6 +112,7 @@ function getSmartContextOptions(currentQuery?: string): SmartContextOptions {
 // Status event types
 export type AgentStatus = {
   type: 'thinking' | 'tool_start' | 'tool_end' | 'tool_blocked' | 'responding' | 'done' | 'subagent_start' | 'subagent_update' | 'subagent_end' | 'queued' | 'queue_processing';
+  sessionId?: string;
   toolName?: string;
   toolInput?: string;
   message?: string;
@@ -239,8 +240,9 @@ class AgentManagerClass extends EventEmitter {
   private instructions: string = '';
   private abortControllersBySession: Map<string, AbortController> = new Map();
   private processingBySession: Map<string, boolean> = new Map();
-  private lastSuggestedPrompt: string | undefined = undefined;
+  private lastSuggestedPromptBySession: Map<string, string | undefined> = new Map();
   private messageQueueBySession: Map<string, Array<{ message: string; channel: string; images?: ImageContent[]; attachmentInfo?: AttachmentInfo; resolve: (result: ProcessResult) => void; reject: (error: Error) => void }>> = new Map();
+  private providerLock: Promise<void> = Promise.resolve();
 
   private constructor() {
     super();
@@ -373,6 +375,7 @@ class AgentManagerClass extends EventEmitter {
       // Emit queued status
       this.emitStatus({
         type: 'queued',
+        sessionId,
         queuePosition,
         queuedMessage: userMessage.slice(0, 100),
         message: `in the litter queue (#${queuePosition})`,
@@ -393,6 +396,7 @@ class AgentManagerClass extends EventEmitter {
     // Emit status that we're processing a queued message
     this.emitStatus({
       type: 'queue_processing',
+      sessionId,
       queuedMessage: next.message.slice(0, 100),
       message: 'digging it up now...',
     });
@@ -425,12 +429,12 @@ class AgentManagerClass extends EventEmitter {
     this.processingBySession.set(sessionId, true);
     const abortController = new AbortController();
     this.abortControllersBySession.set(sessionId, abortController);
-    this.lastSuggestedPrompt = undefined;
+    this.lastSuggestedPromptBySession.set(sessionId, undefined);
     let wasCompacted = false;
 
-    // Set session context for MCP tools to use
-    setCurrentSessionId(sessionId);
-
+    // Wrap entire execution in AsyncLocalStorage context so all tool callbacks
+    // within the SDK's query() inherit the correct session ID
+    return runWithSessionId(sessionId, async () => {
     try {
       // Use smart context: recent messages + rolling summary + semantic retrieval
       const smartContextOptions = getSmartContextOptions(userMessage);
@@ -489,45 +493,49 @@ class AgentManagerClass extends EventEmitter {
 
       const options = await this.buildOptions(factsContext, soulContext, abortController, lastUserMessageTimestamp);
 
-      // Configure provider environment based on model (sets ANTHROPIC_BASE_URL, AUTH_TOKEN, etc.)
-      configureProviderEnvironment(this.model);
-
       // Build prompt - use async generator for images, string for text-only
-      let queryResult;
       console.log('[AgentManager] Calling query() with model:', options.model, 'thinking:', options.maxThinkingTokens || 'default');
-      this.emitStatus({ type: 'thinking', message: '*stretches paws* thinking...' });
+      this.emitStatus({ type: 'thinking', sessionId, message: '*stretches paws* thinking...' });
 
-      if (images && images.length > 0) {
-        // For images, create an async generator that yields SDKUserMessage
-        const contentBlocks: ContentBlock[] = [
-          { type: 'text', text: fullPromptText },
-          ...images.map(img => ({
-            type: 'image' as const,
-            source: {
-              type: 'base64' as const,
-              media_type: img.mediaType,
-              data: img.data,
-            },
-          })),
-        ];
+      // Serialize provider env setup + query start so concurrent sessions
+      // with different providers don't stomp each other's env vars
+      const queryResult = await new Promise<SDKQuery>((resolve) => {
+        this.providerLock = this.providerLock.then(() => {
+          configureProviderEnvironment(this.model);
 
-        async function* messageGenerator() {
-          yield {
-            type: 'user' as const,
-            message: {
-              role: 'user' as const,
-              content: contentBlocks,
-            },
-            parent_tool_use_id: null,
-            session_id: 'default',
-          };
-        }
+          if (images && images.length > 0) {
+            // For images, create an async generator that yields SDKUserMessage
+            const contentBlocks: ContentBlock[] = [
+              { type: 'text', text: fullPromptText },
+              ...images.map(img => ({
+                type: 'image' as const,
+                source: {
+                  type: 'base64' as const,
+                  media_type: img.mediaType,
+                  data: img.data,
+                },
+              })),
+            ];
 
-        console.log(`[AgentManager] Calling query() with ${images.length} image(s)`);
-        queryResult = query({ prompt: messageGenerator(), options });
-      } else {
-        queryResult = query({ prompt: fullPromptText, options });
-      }
+            async function* messageGenerator() {
+              yield {
+                type: 'user' as const,
+                message: {
+                  role: 'user' as const,
+                  content: contentBlocks,
+                },
+                parent_tool_use_id: null,
+                session_id: 'default',
+              };
+            }
+
+            console.log(`[AgentManager] Calling query() with ${images.length} image(s)`);
+            resolve(query({ prompt: messageGenerator(), options }));
+          } else {
+            resolve(query({ prompt: fullPromptText, options }));
+          }
+        });
+      });
       let response = '';
 
       for await (const message of queryResult) {
@@ -540,12 +548,12 @@ class AgentManagerClass extends EventEmitter {
         response = this.extractFromMessage(message, response);
       }
 
-      this.emitStatus({ type: 'done' });
+      this.emitStatus({ type: 'done', sessionId });
 
       // If no text response, make a follow-up call to get one
       if (!response) {
         console.log('[AgentManager] No text response, requesting summary...');
-        this.emitStatus({ type: 'thinking', message: 'summarizing...' });
+        this.emitStatus({ type: 'thinking', sessionId, message: 'summarizing...' });
 
         const summaryResult = query({
           prompt: 'Briefly summarize what you just did in 1-2 sentences.',
@@ -565,7 +573,7 @@ class AgentManagerClass extends EventEmitter {
           response = 'Done.';
         }
 
-        this.emitStatus({ type: 'done' });
+        this.emitStatus({ type: 'done', sessionId });
       }
 
       // Skip saving HEARTBEAT_OK responses from scheduled jobs to memory/chat
@@ -621,7 +629,7 @@ class AgentManagerClass extends EventEmitter {
         response,
         tokensUsed: statsAfter.estimatedTokens,
         wasCompacted,
-        suggestedPrompt: this.lastSuggestedPrompt,
+        suggestedPrompt: this.lastSuggestedPromptBySession.get(sessionId),
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -650,6 +658,7 @@ class AgentManagerClass extends EventEmitter {
         });
       }, 0);
     }
+    }); // end runWithSessionId
   }
 
   /**
@@ -1016,7 +1025,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
         // Extract and strip any trailing "User:" suggested prompts
         const { text: cleanedText, suggestion } = this.extractSuggestedPrompt(text);
         if (suggestion) {
-          this.lastSuggestedPrompt = suggestion;
+          this.lastSuggestedPromptBySession.set(getCurrentSessionId(), suggestion);
         }
         return cleanedText;
       }
@@ -1028,7 +1037,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
         // Extract and strip any trailing "User:" suggested prompts from result
         const { text: cleanedText, suggestion } = this.extractSuggestedPrompt(result);
         if (suggestion) {
-          this.lastSuggestedPrompt = suggestion;
+          this.lastSuggestedPromptBySession.set(getCurrentSessionId(), suggestion);
         }
         return cleanedText;
       }
@@ -1092,10 +1101,22 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
     this.emit('status', status);
   }
 
-  // Track active subagents
-  private activeSubagents: Map<string, { type: string; description: string }> = new Map();
+  // Track active subagents per session
+  private activeSubagentsBySession: Map<string, Map<string, { type: string; description: string }>> = new Map();
+
+  private getActiveSubagents(sessionId: string): Map<string, { type: string; description: string }> {
+    let map = this.activeSubagentsBySession.get(sessionId);
+    if (!map) {
+      map = new Map();
+      this.activeSubagentsBySession.set(sessionId, map);
+    }
+    return map;
+  }
 
   private processStatusFromMessage(message: unknown): void {
+    const sessionId = getCurrentSessionId();
+    const activeSubagents = this.getActiveSubagents(sessionId);
+
     // Handle tool use from assistant messages
     const msg = message as { type?: string; subtype?: string; message?: { content?: unknown } };
     if (msg.type === 'assistant') {
@@ -1114,19 +1135,21 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
               const agentType = input.subagent_type || 'general';
               const description = input.description || input.prompt?.slice(0, 50) || 'working on it';
 
-              this.activeSubagents.set(agentId, { type: agentType, description });
+              activeSubagents.set(agentId, { type: agentType, description });
 
               this.emitStatus({
                 type: 'subagent_start',
+                sessionId,
                 agentId,
                 agentType,
                 toolInput: description,
-                agentCount: this.activeSubagents.size,
+                agentCount: activeSubagents.size,
                 message: this.getSubagentMessage(agentType),
               });
             } else {
               this.emitStatus({
                 type: 'tool_start',
+                sessionId,
                 toolName,
                 toolInput,
                 message: `batting at ${toolName}...`,
@@ -1144,23 +1167,25 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
         for (const block of content) {
           if (block?.type === 'tool_result') {
             // Check if any subagents completed
-            if (this.activeSubagents.size > 0) {
+            if (activeSubagents.size > 0) {
               // Remove one subagent (we don't have exact ID matching, so remove oldest)
-              const firstKey = this.activeSubagents.keys().next().value;
+              const firstKey = activeSubagents.keys().next().value;
               if (firstKey) {
-                this.activeSubagents.delete(firstKey);
+                activeSubagents.delete(firstKey);
               }
 
-              if (this.activeSubagents.size > 0) {
+              if (activeSubagents.size > 0) {
                 // Still have active subagents
                 this.emitStatus({
                   type: 'subagent_update',
-                  agentCount: this.activeSubagents.size,
-                  message: `${this.activeSubagents.size} kitty${this.activeSubagents.size > 1 ? 'ies' : ''} still hunting`,
+                  sessionId,
+                  agentCount: activeSubagents.size,
+                  message: `${activeSubagents.size} kitty${activeSubagents.size > 1 ? 'ies' : ''} still hunting`,
                 });
               } else {
                 this.emitStatus({
                   type: 'subagent_end',
+                  sessionId,
                   agentCount: 0,
                   message: 'squad done! cleaning up...',
                 });
@@ -1168,6 +1193,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
             } else {
               this.emitStatus({
                 type: 'tool_end',
+                sessionId,
                 message: 'caught it! processing...',
               });
             }
@@ -1179,7 +1205,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
     // Handle system messages
     if (msg.type === 'system') {
       if (msg.subtype === 'init') {
-        this.emitStatus({ type: 'thinking', message: 'waking up from a nap...' });
+        this.emitStatus({ type: 'thinking', sessionId, message: 'waking up from a nap...' });
       }
     }
   }
@@ -1318,8 +1344,6 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
         const query = await loadSDK();
         if (!query) throw new Error('Failed to load SDK');
 
-        configureProviderEnvironment(model);
-
         const options: SDKOptions = {
           model,
           maxTurns: 1,
@@ -1328,7 +1352,13 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
           persistSession: false,
         };
 
-        const queryResult = query({ prompt: summaryPrompt, options });
+        // Use providerLock to prevent stomping env vars during concurrent queries
+        const queryResult = await new Promise<SDKQuery>((resolve) => {
+          this.providerLock = this.providerLock.then(() => {
+            configureProviderEnvironment(model);
+            resolve(query({ prompt: summaryPrompt, options }));
+          });
+        });
         let summary = '';
 
         for await (const message of queryResult) {

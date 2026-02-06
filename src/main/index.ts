@@ -1019,7 +1019,11 @@ function setupIPC(): void {
   ipcMain.handle('agent:send', async (event, message: string, sessionId?: string) => {
     console.log(`[IPC] agent:send received sessionId: ${sessionId}`);
     // Set up status listener to forward to renderer
-    const statusHandler = (status: { type: string; toolName?: string; toolInput?: string; message?: string }) => {
+    const effectiveSessionId = sessionId || 'default';
+    const statusHandler = (status: { type: string; sessionId?: string; toolName?: string; toolInput?: string; message?: string }) => {
+      // Only forward status events for this session (or events without sessionId for backward compat)
+      if (status.sessionId && status.sessionId !== effectiveSessionId) return;
+
       // Send status update to the chat window that initiated the request
       const webContents = event.sender;
       if (!webContents.isDestroyed()) {
@@ -1034,7 +1038,6 @@ function setupIPC(): void {
       updateTrayMenu();
 
       // Sync to Telegram (Desktop -> Telegram) - only to the linked chat for this session
-      const effectiveSessionId = sessionId || 'default';
       const linkedChatId = memory?.getChatForSession(effectiveSessionId);
       console.log('[Main] Checking telegram sync - bot exists:', !!telegramBot, 'session:', effectiveSessionId, 'linked chat:', linkedChatId);
       if (telegramBot && linkedChatId) {
