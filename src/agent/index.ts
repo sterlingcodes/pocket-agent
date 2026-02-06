@@ -497,7 +497,7 @@ class AgentManagerClass extends EventEmitter {
 
       // Build prompt - use async generator for images, string for text-only
       console.log('[AgentManager] Calling query() with model:', options.model, 'thinking:', options.maxThinkingTokens || 'default');
-      this.emitStatus({ type: 'thinking', sessionId, message: '*stretches paws* thinking...' });
+      this.emitStatus({ type: 'thinking', sessionId, message: '*fires thrusters* thinking...' });
 
       // Serialize provider env setup + query start so concurrent sessions
       // with different providers don't stomp each other's env vars
@@ -1139,7 +1139,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
                 sessionId,
                 toolName: pocketName,
                 toolInput,
-                message: `batting at ${pocketName}...`,
+                message: `running ${pocketName}...`,
                 isPocketCli: true,
               });
             } else {
@@ -1176,7 +1176,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
                   type: 'subagent_update',
                   sessionId,
                   agentCount: activeSubagents.size,
-                  message: `${activeSubagents.size} kitty${activeSubagents.size > 1 ? 'ies' : ''} still hunting`,
+                  message: `${activeSubagents.size} minion${activeSubagents.size > 1 ? 's' : ''} still scanning`,
                 });
               } else {
                 this.emitStatus({
@@ -1190,7 +1190,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
               this.emitStatus({
                 type: 'tool_end',
                 sessionId,
-                message: 'caught it! processing...',
+                message: 'locked on! processing...',
               });
             }
           }
@@ -1201,7 +1201,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
     // Handle system messages
     if (msg.type === 'system') {
       if (msg.subtype === 'init') {
-        this.emitStatus({ type: 'thinking', sessionId, message: 'waking up from a nap...' });
+        this.emitStatus({ type: 'thinking', sessionId, message: 'powering up systems...' });
       }
     }
   }
