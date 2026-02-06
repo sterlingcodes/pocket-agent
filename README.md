@@ -1,4 +1,4 @@
-# 🐱 Pocket Agent
+# Pocket Agent
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/KenKaiii/pocket-agent/main/assets/icon_rounded_1024.png" alt="Pocket Agent" width="200">

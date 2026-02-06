@@ -220,7 +220,7 @@
     .new-tab-btn:hover {
       border-color: var(--accent);
       color: var(--accent);
-      background: rgba(168, 85, 247, 0.1);
+      background: rgba(16, 185, 129, 0.1);
     }
 
     .header-left {
@@ -473,23 +473,13 @@
       flex-shrink: 0;
     }
 
-    .modal-icon.pixel-cat {
-      width: 28px;
+    .modal-icon.status-orb {
+      width: 20px;
       height: 20px;
-      background: transparent;
-      border: none;
-      position: relative;
-    }
-
-    .modal-icon.pixel-cat::before {
-      content: '';
-      position: absolute;
-      width: 3px;
-      height: 3px;
-      top: 0;
-      left: 0;
-      animation: pixelcat 0.6s steps(1) infinite;
-      image-rendering: pixelated;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+      animation: orbGlow 1.8s ease-in-out infinite;
     }
 
     .modal-title h2 {
@@ -648,10 +638,7 @@
       font-size: 36px;
       font-weight: 900;
       font-family: system-ui, -apple-system, sans-serif;
-      background: linear-gradient(135deg, #6ee7b7 0%, #10b981 50%, #34d399 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      color: #ffffff;
       user-select: none;
     }
 
@@ -748,41 +735,146 @@
       50% { opacity: 0.5; }
     }
 
-    .sidebar-section {
-      padding: 12px 16px;
+    /* Sidebar Navigation Tabs */
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 8px 8px 0 8px;
     }
 
-    .sidebar-section-header {
+    .sidebar-nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 12px;
+      background: transparent;
+      border: none;
+      border-left: 3px solid transparent;
+      color: var(--text-muted);
+      font-family: 'Sora', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      transition: all 0.15s ease;
+      text-align: left;
+    }
+
+    .sidebar-nav-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .sidebar-nav-btn.active {
+      border-left-color: var(--accent);
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--text-primary);
+    }
+
+    .sidebar-nav-btn svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Side Panel */
+    .side-panel {
+      display: none;
+      flex-direction: column;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border);
+      min-width: 250px;
+      overflow: hidden;
+    }
+
+    .side-panel.visible {
+      display: flex;
+    }
+
+    .side-panel-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
 
-    .sidebar-section-title {
-      font-size: 11px;
+    .side-panel-title {
+      font-size: 13px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
+      color: var(--text-primary);
     }
 
-    .recent-done-list {
+    .side-panel-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .side-panel-actions button {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1;
+      transition: all 0.15s ease;
+    }
+
+    .side-panel-actions button:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .side-panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .side-panel-placeholder {
+      text-align: center;
+      color: var(--text-muted);
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 8px;
-      max-height: 400px;
-      overflow-y: auto;
     }
 
-    .recent-done-list::-webkit-scrollbar { width: 4px; }
-    .recent-done-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .side-panel-placeholder svg {
+      width: 32px;
+      height: 32px;
+      opacity: 0.4;
+    }
 
-    .recent-done-empty {
-      font-size: 11px;
-      color: var(--text-muted);
-      padding: 8px 0;
-      text-align: center;
+    .side-panel-placeholder span {
+      font-size: 13px;
+    }
+
+    /* Resize Handle */
+    .resize-handle {
+      width: 4px;
+      cursor: col-resize;
+      background: transparent;
+      flex-shrink: 0;
+      transition: background 0.15s ease;
+      display: none;
+    }
+
+    .resize-handle:hover,
+    .resize-handle.dragging {
+      background: var(--accent);
+    }
+
+    .resize-handle.visible {
+      display: block;
     }
 
     .started-section {
@@ -989,13 +1081,13 @@
       background: var(--user-bubble);
       color: white;
       border-bottom-right-radius: 6px;
-      box-shadow: 0 4px 14px rgba(168, 85, 247, 0.25);
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .message.user:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.35);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
     }
 
     .message.assistant {
@@ -1303,99 +1395,25 @@
     }
 
     .status-spinner {
-      width: 24px;
-      height: 18px;
-      background: transparent;
+      width: 14px;
+      height: 14px;
       flex-shrink: 0;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+      animation: orbGlow 1.8s ease-in-out infinite;
     }
 
-    .status-spinner::before {
-      content: '';
-      position: absolute;
-      width: 3px;
-      height: 3px;
-      top: 0;
-      left: 0;
-      animation: pixelcat 0.6s steps(1) infinite;
-      image-rendering: pixelated;
-    }
-
-    @keyframes pixelcat {
-      /* Frame 1: Cat walking - legs apart */
-      0%, 25% {
-        box-shadow:
-          /* Ears */
-          3px 0 0 var(--accent), 9px 0 0 var(--accent),
-          /* Head */
-          3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
-          0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
-          /* Eyes */
-          3px 6px 0 #fff, 9px 6px 0 #fff,
-          /* Body */
-          3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
-          3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
-          /* Tail up */
-          18px 6px 0 var(--accent), 21px 3px 0 var(--accent),
-          /* Legs - apart */
-          3px 15px 0 var(--accent), 12px 15px 0 var(--accent);
+    @keyframes orbGlow {
+      0%, 100% {
+        opacity: 0.4;
+        box-shadow: 0 0 6px rgba(16, 185, 129, 0.3);
+        transform: scale(0.85);
       }
-      /* Frame 2: Cat walking - legs together */
-      25.01%, 50% {
-        box-shadow:
-          /* Ears */
-          3px 0 0 var(--accent), 9px 0 0 var(--accent),
-          /* Head */
-          3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
-          0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
-          /* Eyes */
-          3px 6px 0 #fff, 9px 6px 0 #fff,
-          /* Body */
-          3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
-          3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
-          /* Tail middle */
-          18px 9px 0 var(--accent), 21px 6px 0 var(--accent),
-          /* Legs - together */
-          6px 15px 0 var(--accent), 9px 15px 0 var(--accent);
-      }
-      /* Frame 3: Cat walking - legs crossed */
-      50.01%, 75% {
-        box-shadow:
-          /* Ears */
-          3px 0 0 var(--accent), 9px 0 0 var(--accent),
-          /* Head */
-          3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
-          0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
-          /* Eyes */
-          3px 6px 0 #fff, 9px 6px 0 #fff,
-          /* Body */
-          3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
-          3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
-          /* Tail down */
-          18px 12px 0 var(--accent), 21px 9px 0 var(--accent),
-          /* Legs - reversed */
-          12px 15px 0 var(--accent), 3px 15px 0 var(--accent);
-      }
-      /* Frame 4: Cat walking - legs wide */
-      75.01%, 100% {
-        box-shadow:
-          /* Ears */
-          3px 0 0 var(--accent), 9px 0 0 var(--accent),
-          /* Head */
-          3px 3px 0 var(--accent), 6px 3px 0 var(--accent), 9px 3px 0 var(--accent),
-          0 6px 0 var(--accent), 3px 6px 0 var(--accent), 6px 6px 0 var(--accent), 9px 6px 0 var(--accent), 12px 6px 0 var(--accent),
-          /* Eyes */
-          3px 6px 0 #fff, 9px 6px 0 #fff,
-          /* Body */
-          3px 9px 0 var(--accent), 6px 9px 0 var(--accent), 9px 9px 0 var(--accent), 12px 9px 0 var(--accent), 15px 9px 0 var(--accent),
-          3px 12px 0 var(--accent), 6px 12px 0 var(--accent), 9px 12px 0 var(--accent), 12px 12px 0 var(--accent),
-          /* Tail up */
-          18px 6px 0 var(--accent), 21px 3px 0 var(--accent),
-          /* Legs - wide */
-          0 15px 0 var(--accent), 15px 15px 0 var(--accent);
+      50% {
+        opacity: 1;
+        box-shadow: 0 0 14px rgba(16, 185, 129, 0.7);
+        transform: scale(1);
       }
     }
 
@@ -1555,7 +1573,7 @@
 
     .input-container:focus-within {
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15), 0 0 20px rgba(168, 85, 247, 0.1);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15), 0 0 20px rgba(16, 185, 129, 0.1);
     }
 
     .attach-btn {
@@ -1655,12 +1673,12 @@
       cursor: pointer;
       transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
       flex-shrink: 0;
-      box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3), inset 0 -3px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3), inset 0 -3px rgba(0, 0, 0, 0.2);
     }
 
     #send-btn:hover:not(:disabled) {
       transform: scale(1.08) rotate(-3deg);
-      box-shadow: 0 6px 20px rgba(168, 85, 247, 0.45), inset 0 -3px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45), inset 0 -3px rgba(0, 0, 0, 0.2);
     }
 
     #send-btn:active:not(:disabled) {
@@ -1721,7 +1739,7 @@
     .search-toggle:hover {
       border-color: var(--accent);
       color: var(--accent);
-      background: rgba(168, 85, 247, 0.1);
+      background: rgba(16, 185, 129, 0.1);
     }
 
     .search-toggle svg {
@@ -1796,7 +1814,7 @@
 
     .search-nav-btn:hover:not(:disabled) {
       color: var(--accent);
-      background: rgba(168, 85, 247, 0.1);
+      background: rgba(16, 185, 129, 0.1);
     }
 
     .search-nav-btn:disabled {
@@ -1835,7 +1853,7 @@
 
     /* Search highlight */
     mark.search-highlight {
-      background: rgba(168, 85, 247, 0.4);
+      background: rgba(16, 185, 129, 0.4);
       color: inherit;
       border-radius: 2px;
       padding: 0 2px;
@@ -1976,7 +1994,7 @@
     .message-copy-btn:hover {
       opacity: 1 !important;
       color: var(--accent);
-      background: rgba(168, 85, 247, 0.1);
+      background: rgba(16, 185, 129, 0.1);
     }
 
     .message-copy-btn.copied {
@@ -2112,7 +2130,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(168, 85, 247, 0.1);
+      background: rgba(16, 185, 129, 0.1);
       backdrop-filter: blur(4px);
       display: none;
       align-items: center;
@@ -2134,7 +2152,7 @@
       background: var(--bg-secondary);
       border: 2px dashed var(--accent);
       border-radius: 16px;
-      box-shadow: 0 8px 32px rgba(168, 85, 247, 0.2);
+      box-shadow: 0 8px 32px rgba(16, 185, 129, 0.2);
     }
 
     .drag-overlay-icon {
@@ -2281,10 +2299,10 @@
   <div class="modal-overlay" id="about-modal" onclick="if(event.target === this) closeAbout();">
     <div class="modal">
       <div class="modal-header">
-        <div class="modal-icon pixel-cat"></div>
+        <div class="modal-icon status-orb"></div>
         <div class="modal-title">
-          <h2>who made me?</h2>
-          <p>the human behind franky</p>
+          <h2>who built this ship?</h2>
+          <p>the engineer behind alpha</p>
         </div>
         <button class="modal-close" onclick="playNormalClick(); closeAbout();">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2343,29 +2361,34 @@
       </div>
     </div>
 
-    <nav class="main-nav">
-      <button class="main-nav-btn active" id="nav-chat" onclick="playNormalClick(); switchMainView('chat')">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+    <nav class="sidebar-nav">
+      <button class="sidebar-nav-btn active" data-tab="chat" onclick="switchTab('chat')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
         Chat
       </button>
-      <button class="main-nav-btn" id="nav-docs" onclick="playNormalClick(); openDocs()">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+      <button class="sidebar-nav-btn" data-tab="docs" onclick="switchTab('docs')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
         Docs
       </button>
-      <button class="main-nav-btn" id="nav-log" onclick="playNormalClick(); openRoutines()">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-        Log
+      <button class="sidebar-nav-btn" data-tab="logs" onclick="switchTab('logs')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+        Logs
       </button>
     </nav>
-
-    <div class="sidebar-section">
-      <div class="sidebar-section-header">
-        <span class="sidebar-section-title">Recently Done</span>
-      </div>
-      <div class="recent-done-list" id="recent-done-list">
-        <div class="recent-done-empty">Nothing yet</div>
-      </div>
-    </div>
 
     <div class="started-section">
       <div class="started-label">Started</div>
@@ -2445,22 +2468,25 @@
         <div id="ghost-suggestion"></div>
         <textarea
           id="message-input"
-          placeholder="what's on your mind? 🐱"
+          placeholder="what's the mission?"
           rows="1"
           onkeydown="handleKeydown(event)"
           oninput="handleInput(event)"
         ></textarea>
       </div>
     </div>
-    <button id="send-btn" onclick="handleSendClick()" title="Pounce! 🐾">
+    <button id="send-btn" onclick="handleSendClick()" title="Launch">
       <svg class="send-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-        <!-- Paw pad (main) -->
-        <ellipse cx="12" cy="14" rx="5" ry="4.5"/>
-        <!-- Toe beans -->
-        <ellipse cx="7" cy="8" rx="2" ry="2.5"/>
-        <ellipse cx="17" cy="8" rx="2" ry="2.5"/>
-        <ellipse cx="10" cy="5.5" rx="1.8" ry="2.2"/>
-        <ellipse cx="14" cy="5.5" rx="1.8" ry="2.2"/>
+        <!-- UFO dome -->
+        <ellipse cx="12" cy="9" rx="4" ry="3"/>
+        <!-- UFO body -->
+        <ellipse cx="12" cy="12" rx="8" ry="3"/>
+        <!-- UFO beam -->
+        <polygon points="9,15 15,15 17,20 7,20" opacity="0.3"/>
+        <!-- UFO lights -->
+        <circle cx="8" cy="12" r="1" fill="#fff" opacity="0.7"/>
+        <circle cx="12" cy="13" r="1" fill="#fff" opacity="0.7"/>
+        <circle cx="16" cy="12" r="1" fill="#fff" opacity="0.7"/>
       </svg>
       <svg class="stop-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
         <rect x="6" y="6" width="12" height="12" rx="2"/>
@@ -2488,6 +2514,17 @@
     </div>
   </div>
   </div><!-- chat-content -->
+  <div class="resize-handle" id="resize-handle"></div>
+  <div class="side-panel" id="side-panel">
+    <div class="side-panel-header">
+      <span class="side-panel-title" id="side-panel-title">Docs</span>
+      <div class="side-panel-actions">
+        <button class="side-panel-maximize" id="side-panel-maximize" title="Maximize" onclick="togglePanelMaximize()">&#x2922;</button>
+        <button class="side-panel-close" title="Close" onclick="switchTab('chat')">&#x2715;</button>
+      </div>
+    </div>
+    <div class="side-panel-content" id="side-panel-content"></div>
+  </div>
   </div><!-- main-layout -->
 
   <script>
@@ -2877,7 +2914,7 @@
         // Create a new status indicator for this session
         const existingStatusEl = statusElBySession.get(sessionId);
         if (!existingStatusEl || !messagesDiv.contains(existingStatusEl)) {
-          const statusEl = addStatusIndicator('*stretches paws* thinking...');
+          const statusEl = addStatusIndicator('*fires thrusters* thinking...');
           statusElBySession.set(sessionId, statusEl);
         }
       }
@@ -3339,7 +3376,7 @@
         isLoadingBySession.set(sessionId, true);
         renderTabs();
         setButtonState(true);
-        const statusEl = addStatusIndicator('*stretches paws* thinking...');
+        const statusEl = addStatusIndicator('*fires thrusters* thinking...');
         statusElBySession.set(sessionId, statusEl);
       }
 
@@ -3734,13 +3771,13 @@
       if (status.type === 'thinking') {
         // Don't overwrite blocked state
         if (!statusEl.classList.contains('tool-blocked')) {
-          actionEl.textContent = status.message || '*stretches paws* thinking...';
+          actionEl.textContent = status.message || '*fires thrusters* thinking...';
           detailEl.textContent = '';
           detailEl.style.display = 'none';
           statusEl.classList.remove('subagent-active');
         }
       } else if (status.type === 'tool_start') {
-        actionEl.textContent = status.toolName || 'pouncing on it...';
+        actionEl.textContent = status.toolName || 'locking on...';
         if (status.toolInput) {
           detailEl.textContent = status.toolInput;
           detailEl.title = status.toolInput;
@@ -3753,7 +3790,7 @@
       } else if (status.type === 'tool_end') {
         // Don't overwrite blocked state - keep showing the block message
         if (!statusEl.classList.contains('tool-blocked')) {
-          actionEl.textContent = status.message || 'caught it! processing...';
+          actionEl.textContent = status.message || 'locked on! processing...';
           detailEl.textContent = '';
           detailEl.style.display = 'none';
           statusEl.classList.remove('subagent-active');
@@ -3774,7 +3811,7 @@
       } else if (status.type === 'subagent_start') {
         // Subagent spawned - show special status
         statusEl.classList.add('subagent-active');
-        actionEl.textContent = status.message || 'summoning cat friends';
+        actionEl.textContent = status.message || 'deploying minions';
         if (status.toolInput) {
           const countBadge = status.agentCount > 1 ? ` (${status.agentCount} active)` : '';
           detailEl.textContent = status.toolInput + countBadge;
@@ -3786,23 +3823,23 @@
         }
       } else if (status.type === 'subagent_update') {
         // Multiple subagents, one finished
-        actionEl.textContent = status.message || `${status.agentCount} kitties on the job`;
+        actionEl.textContent = status.message || `${status.agentCount} minions scanning`;
         detailEl.textContent = '';
         detailEl.style.display = 'none';
       } else if (status.type === 'subagent_end') {
         // All subagents done
         statusEl.classList.remove('subagent-active');
-        actionEl.textContent = status.message || 'cat squad finished! ✨';
+        actionEl.textContent = status.message || 'all minions returned! ✨';
         detailEl.textContent = '';
         detailEl.style.display = 'none';
       } else if (status.type === 'responding') {
-        actionEl.textContent = 'grooming my response... 🐈';
+        actionEl.textContent = 'composing transmission...';
         detailEl.textContent = '';
         detailEl.style.display = 'none';
         statusEl.classList.remove('subagent-active');
       } else if (status.type === 'queued') {
         // Message was queued - show queue position
-        actionEl.textContent = status.message || 'in the litter queue 📋';
+        actionEl.textContent = status.message || 'in the launch queue 📋';
         if (status.queuePosition) {
           detailEl.textContent = `Position #${status.queuePosition} in queue`;
           detailEl.style.display = 'block';
@@ -4121,8 +4158,8 @@
       messagesDiv.innerHTML = `
         <div class="empty-state">
           <div class="pixel-heart"></div>
-          <div class="empty-title">Franky here!</div>
-          <div class="empty-subtitle">ready to go whenever you are, i've got your back ✨</div>
+          <div class="empty-title">Alpha online</div>
+          <div class="empty-subtitle">systems ready, standing by for your command ✨</div>
         </div>
       `;
     }
@@ -4655,16 +4692,11 @@
 
     // ========== SIDEBAR INIT ==========
     function formatStartedTime(date) {
-      const now = new Date();
-      const diffMs = now - date;
-      const diffMins = Math.floor(diffMs / 60000);
-      const diffHours = Math.floor(diffMs / 3600000);
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      const year = date.getFullYear();
       const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-
-      if (diffMins < 1) return 'just now';
-      if (diffHours < 1) return `${diffMins}m ago at ${timeStr}`;
-      if (date.toDateString() === now.toDateString()) return `this morning ${timeStr}`;
-      return date.toLocaleDateString() + ' ' + timeStr;
+      return `${month}/${day}/${year} ${timeStr}`;
     }
 
     async function updateSidebarModel() {
@@ -4678,6 +4710,133 @@
       } catch (err) { /* ignore */ }
     }
 
+    /* ========== SIDEBAR TAB NAVIGATION ========== */
+    let activeTab = 'chat';
+    let panelMaximized = false;
+    let splitRatio = 0.55;
+
+    const panelPlaceholders = {
+      docs: {
+        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>',
+        text: 'Coming soon'
+      },
+      logs: {
+        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
+        text: 'Coming soon'
+      }
+    };
+
+    function switchTab(tabName) {
+      const navBtns = document.querySelectorAll('.sidebar-nav-btn');
+      const sidePanel = document.getElementById('side-panel');
+      const resizeHandle = document.getElementById('resize-handle');
+      const chatContent = document.querySelector('.chat-content');
+
+      // Toggle off if clicking the already-active non-chat tab
+      if (tabName !== 'chat' && tabName === activeTab) {
+        tabName = 'chat';
+      }
+
+      // Update active button
+      navBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
+      activeTab = tabName;
+      panelMaximized = false;
+
+      if (tabName === 'chat') {
+        sidePanel.classList.remove('visible');
+        resizeHandle.classList.remove('visible');
+        chatContent.style.display = '';
+        chatContent.style.flex = '1';
+        chatContent.style.width = '';
+      } else {
+        sidePanel.classList.add('visible');
+        resizeHandle.classList.add('visible');
+        chatContent.style.display = '';
+        chatContent.style.flex = '';
+        chatContent.style.width = (splitRatio * 100) + '%';
+        sidePanel.style.flex = '';
+        sidePanel.style.width = ((1 - splitRatio) * 100) + '%';
+
+        // Set panel content
+        document.getElementById('side-panel-title').textContent = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+        const placeholder = panelPlaceholders[tabName];
+        document.getElementById('side-panel-content').innerHTML =
+          '<div class="side-panel-placeholder">' + placeholder.icon + '<span>' + placeholder.text + '</span></div>';
+
+        // Reset maximize button
+        document.getElementById('side-panel-maximize').innerHTML = '&#x2922;';
+        document.getElementById('side-panel-maximize').title = 'Maximize';
+      }
+    }
+
+    function togglePanelMaximize() {
+      const chatContent = document.querySelector('.chat-content');
+      const sidePanel = document.getElementById('side-panel');
+      const resizeHandle = document.getElementById('resize-handle');
+      const maxBtn = document.getElementById('side-panel-maximize');
+
+      panelMaximized = !panelMaximized;
+
+      if (panelMaximized) {
+        chatContent.style.display = 'none';
+        resizeHandle.classList.remove('visible');
+        sidePanel.style.width = '100%';
+        maxBtn.innerHTML = '&#x2921;';
+        maxBtn.title = 'Restore';
+      } else {
+        chatContent.style.display = '';
+        resizeHandle.classList.add('visible');
+        chatContent.style.width = (splitRatio * 100) + '%';
+        sidePanel.style.width = ((1 - splitRatio) * 100) + '%';
+        maxBtn.innerHTML = '&#x2922;';
+        maxBtn.title = 'Maximize';
+      }
+    }
+
+    // Resize handle drag logic
+    (function initResizeHandle() {
+      const handle = document.getElementById('resize-handle');
+      const chatContent = document.querySelector('.chat-content');
+      const sidePanel = document.getElementById('side-panel');
+      const mainLayout = document.querySelector('.main-layout');
+      let dragging = false;
+
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        dragging = true;
+        handle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const layoutRect = mainLayout.getBoundingClientRect();
+        const sidebar = document.getElementById('sidebar');
+        const sidebarWidth = sidebar.getBoundingClientRect().width;
+        const availableWidth = layoutRect.width - sidebarWidth;
+        const offsetX = e.clientX - layoutRect.left - sidebarWidth;
+        const ratio = Math.max(0.2, Math.min(0.8, offsetX / availableWidth));
+
+        // Enforce minimum widths of 250px
+        const chatWidth = ratio * availableWidth;
+        const panelWidth = (1 - ratio) * availableWidth;
+        if (chatWidth < 250 || panelWidth < 250) return;
+
+        splitRatio = ratio;
+        chatContent.style.width = (ratio * 100) + '%';
+        sidePanel.style.width = ((1 - ratio) * 100) + '%';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      });
+    })();
+
     function initSidebar() {
       const startedEl = document.getElementById('started-value');
       if (startedEl) {
@@ -4690,11 +4849,6 @@
 
       updateSidebarModel();
       setInterval(updateSidebarModel, 10000);
-    }
-
-    function switchMainView(view) {
-      document.querySelectorAll('.main-nav-btn').forEach(btn => btn.classList.remove('active'));
-      document.getElementById(`nav-${view}`)?.classList.add('active');
     }
 
     if (document.readyState === 'loading') {

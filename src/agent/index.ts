@@ -375,7 +375,7 @@ class AgentManagerClass extends EventEmitter {
         type: 'queued',
         queuePosition,
         queuedMessage: userMessage.slice(0, 100),
-        message: `in the litter queue (#${queuePosition})`,
+        message: `in the launch queue (#${queuePosition})`,
       });
     });
   }
@@ -394,7 +394,7 @@ class AgentManagerClass extends EventEmitter {
     this.emitStatus({
       type: 'queue_processing',
       queuedMessage: next.message.slice(0, 100),
-      message: 'digging it up now...',
+      message: 'retrieving from cargo bay...',
     });
 
     try {
@@ -495,7 +495,7 @@ class AgentManagerClass extends EventEmitter {
       // Build prompt - use async generator for images, string for text-only
       let queryResult;
       console.log('[AgentManager] Calling query() with model:', options.model, 'thinking:', options.maxThinkingTokens || 'default');
-      this.emitStatus({ type: 'thinking', message: '*stretches paws* thinking...' });
+      this.emitStatus({ type: 'thinking', message: '*fires thrusters* thinking...' });
 
       if (images && images.length > 0) {
         // For images, create an async generator that yields SDKUserMessage
@@ -1129,7 +1129,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
                 type: 'tool_start',
                 toolName,
                 toolInput,
-                message: `batting at ${toolName}...`,
+                message: `engaging ${toolName}...`,
               });
             }
           }
@@ -1156,19 +1156,19 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
                 this.emitStatus({
                   type: 'subagent_update',
                   agentCount: this.activeSubagents.size,
-                  message: `${this.activeSubagents.size} kitty${this.activeSubagents.size > 1 ? 'ies' : ''} still hunting`,
+                  message: `${this.activeSubagents.size} minion${this.activeSubagents.size > 1 ? 's' : ''} still scanning`,
                 });
               } else {
                 this.emitStatus({
                   type: 'subagent_end',
                   agentCount: 0,
-                  message: 'squad done! cleaning up...',
+                  message: 'all minions returned! processing...',
                 });
               }
             } else {
               this.emitStatus({
                 type: 'tool_end',
-                message: 'caught it! processing...',
+                message: 'locked on! processing...',
               });
             }
           }
@@ -1179,68 +1179,68 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
     // Handle system messages
     if (msg.type === 'system') {
       if (msg.subtype === 'init') {
-        this.emitStatus({ type: 'thinking', message: 'waking up from a nap...' });
+        this.emitStatus({ type: 'thinking', message: 'powering up systems...' });
       }
     }
   }
 
   private getSubagentMessage(agentType: string): string {
     const messages: Record<string, string> = {
-      'Explore': 'sent a curious kitten to explore',
-      'Plan': 'calling in the architect cat',
-      'Bash': 'summoning a terminal tabby',
-      'general-purpose': 'summoning a helper kitty',
+      'Explore': 'sent a minion to explore',
+      'Plan': 'consulting the nav computer',
+      'Bash': 'deploying a terminal minion',
+      'general-purpose': 'dispatching a helper minion',
     };
-    return messages[agentType] || `summoning ${agentType} cat friend`;
+    return messages[agentType] || `deploying ${agentType} minion`;
   }
 
   private formatToolName(name: string): string {
-    // Fun, cat-themed tool names that match PA's vibe
+    // Spaceship-themed tool names that match Alpha's vibe
     const friendlyNames: Record<string, string> = {
       // SDK built-in tools
-      Read: 'sniffing this file',
-      Write: 'scratching notes down',
-      Edit: 'pawing at some code',
-      Bash: 'hacking at the terminal',
-      Glob: 'hunting for files',
-      Grep: 'digging through code',
-      WebSearch: 'prowling the web',
-      WebFetch: 'fetching that page',
-      Task: 'summoning a helper kitty',
+      Read: 'scanning this file',
+      Write: 'logging to databank',
+      Edit: 'recalibrating code',
+      Bash: 'hacking the terminal',
+      Glob: 'scanning for files',
+      Grep: 'sweeping through code',
+      WebSearch: 'scanning the web',
+      WebFetch: 'fetching that signal',
+      Task: 'dispatching a helper minion',
       NotebookEdit: 'editing notebook',
 
       // Memory tools
-      remember: 'stashing in my cat brain',
-      forget: 'knocking it off the shelf',
-      list_facts: 'checking my memories',
-      memory_search: 'sniffing through archives',
+      remember: 'storing in memory banks',
+      forget: 'jettisoning from memory',
+      list_facts: 'querying memory banks',
+      memory_search: 'scanning through archives',
 
       // Browser tool
-      browser: 'pouncing on browser',
+      browser: 'locking onto browser',
 
       // Computer use tool
-      computer: 'walking on the keyboard',
+      computer: 'interfacing with controls',
 
       // Scheduler tools
-      schedule_task: 'setting an alarm meow',
+      schedule_task: 'setting a mission timer',
       list_scheduled_tasks: 'checking the schedule',
-      delete_scheduled_task: 'knocking that off',
+      delete_scheduled_task: 'aborting that mission',
 
       // macOS tools
-      notify: 'sending a meow',
+      notify: 'transmitting a signal',
 
       // Task tools
-      task_add: 'adding to the hunt list',
+      task_add: 'adding to the mission log',
       task_list: 'checking your tasks',
-      task_complete: 'caught it!',
-      task_delete: 'batting that away',
-      task_due: 'sniffing what\'s due',
+      task_complete: 'mission complete!',
+      task_delete: 'scrubbing that entry',
+      task_due: 'scanning what\'s due',
 
       // Calendar tools
-      calendar_add: 'marking territory',
+      calendar_add: 'plotting coordinates',
       calendar_list: 'checking the calendar',
-      calendar_upcoming: 'seeing what\'s coming up',
-      calendar_delete: 'scratching that out',
+      calendar_upcoming: 'scanning the horizon',
+      calendar_delete: 'clearing that waypoint',
     };
     return friendlyNames[name] || name;
   }
