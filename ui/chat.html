@@ -580,6 +580,308 @@
       font-size: 11px;
     }
 
+    /* ========== MAIN LAYOUT & SIDEBAR ========== */
+    .main-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 200px;
+      min-width: 200px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      contain: layout paint;
+      transform: translateZ(0);
+      will-change: contents;
+    }
+
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      bottom: 115px;
+      left: 16px;
+      right: 16px;
+      height: 1px;
+      background: var(--border);
+      z-index: 10;
+    }
+
+    .sidebar-header {
+      padding: 24px 16px 16px 16px;
+    }
+
+    .sidebar-identity {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .sidebar-avatar {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-avatar-img {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1f2937 0%, #111827 50%, #000000 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .sidebar-avatar-img span {
+      font-size: 36px;
+      font-weight: 900;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #6ee7b7 0%, #10b981 50%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      user-select: none;
+    }
+
+    .sidebar-avatar-glow {
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      filter: blur(6px);
+      z-index: 0;
+      background: linear-gradient(90deg, #eab308, #f59e0b, #eab308);
+      background-size: 200% 100%;
+      opacity: 0.4;
+      transition: opacity 0.3s ease, background 0.3s ease;
+      animation: glowRotate 3s linear infinite, glowPulse 2s ease-in-out infinite;
+      transform: translateZ(0);
+      will-change: opacity, background;
+      backface-visibility: hidden;
+    }
+
+    .sidebar-avatar-glow.working {
+      background: linear-gradient(90deg, #22c55e, #06b6d4, #22c55e);
+      opacity: 0.8;
+    }
+
+    .sidebar-avatar-glow.idle {
+      background: linear-gradient(90deg, #eab308, #f59e0b, #eab308);
+      opacity: 0.4;
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 0.9; transform: scale(1.05); }
+    }
+
+    @keyframes glowRotate {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+
+    .sidebar-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .sidebar-info h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--text-primary);
+    }
+
+    .sidebar-status {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-secondary);
+      z-index: 2;
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+      transform: translateZ(0);
+      will-change: opacity, background, box-shadow;
+      backface-visibility: hidden;
+    }
+
+    .status-dot.status-working {
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+      animation: statusPulse 2s ease-in-out infinite;
+    }
+
+    .status-dot.status-idle {
+      background: #eab308;
+      box-shadow: 0 0 8px rgba(234, 179, 8, 0.4);
+      animation: none;
+    }
+
+    .sidebar-status.status-working { color: #ffffff; }
+    .sidebar-status.status-idle { color: #9ca3af; }
+
+    @keyframes statusPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .sidebar-section {
+      padding: 12px 16px;
+    }
+
+    .sidebar-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .sidebar-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .recent-done-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .recent-done-list::-webkit-scrollbar { width: 4px; }
+    .recent-done-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .recent-done-empty {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 8px 0;
+      text-align: center;
+    }
+
+    .started-section {
+      font-size: 11px;
+      padding: 0 16px 12px 16px;
+      margin-top: auto;
+      flex-shrink: 0;
+    }
+
+    .started-label {
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 10px;
+    }
+
+    .started-value {
+      color: #ffffff;
+      font-weight: 500;
+      font-size: 11px;
+    }
+
+    .model-context-section {
+      height: 56px;
+      padding: 8px 16px 16px 16px;
+      background: linear-gradient(180deg, transparent 0%, rgba(16, 185, 129, 0.03) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .model-section { font-size: 11px; }
+
+    .model-label {
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 10px;
+    }
+
+    .model-name {
+      color: #ffffff;
+      font-weight: 500;
+      font-size: 11px;
+      word-break: break-all;
+    }
+
+    .main-nav {
+      display: flex;
+      gap: 4px;
+      padding: 0 16px 12px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .main-nav-btn {
+      flex: 1;
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .main-nav-btn:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+
+    .main-nav-btn.active {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: var(--accent);
+    }
+
+    .main-nav-btn svg { width: 14px; height: 14px; }
+
+    .chat-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+      contain: layout paint;
+      transform: translateZ(0);
+    }
+
     /* Messages Container */
     #messages {
       flex: 1;
@@ -2023,6 +2325,62 @@
     <button class="new-tab-btn" onclick="playNormalClick(); createNewSession()" title="New chat">+</button>
   </div>
 
+  <div class="main-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-identity">
+        <div class="sidebar-avatar" id="sidebar-avatar">
+          <div class="sidebar-avatar-glow idle" id="avatar-glow"></div>
+          <div class="sidebar-avatar-img"><span>α</span></div>
+          <span class="status-dot status-idle" id="status-dot"></span>
+        </div>
+        <div class="sidebar-info">
+          <h2 style="margin-top: 3px;">Alpha</h2>
+          <div class="sidebar-status status-idle" id="sidebar-status">
+            <span id="sidebar-status-text">Ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="main-nav">
+      <button class="main-nav-btn active" id="nav-chat" onclick="playNormalClick(); switchMainView('chat')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        Chat
+      </button>
+      <button class="main-nav-btn" id="nav-docs" onclick="playNormalClick(); openDocs()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+        Docs
+      </button>
+      <button class="main-nav-btn" id="nav-log" onclick="playNormalClick(); openRoutines()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        Log
+      </button>
+    </nav>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-header">
+        <span class="sidebar-section-title">Recently Done</span>
+      </div>
+      <div class="recent-done-list" id="recent-done-list">
+        <div class="recent-done-empty">Nothing yet</div>
+      </div>
+    </div>
+
+    <div class="started-section">
+      <div class="started-label">Started</div>
+      <div class="started-value" id="started-value">—</div>
+    </div>
+
+    <div class="model-context-section">
+      <div class="model-section">
+        <div class="model-label">Model</div>
+        <div class="model-name" id="sidebar-model-name">—</div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="chat-content">
   <div id="messages"></div>
 
   <!-- Scroll Buttons -->
@@ -2129,6 +2487,8 @@
       <div class="drag-overlay-hint">Images, PDFs, code, and text files supported</div>
     </div>
   </div>
+  </div><!-- chat-content -->
+  </div><!-- main-layout -->
 
   <script>
     const messagesDiv = document.getElementById('messages');
@@ -3475,6 +3835,7 @@
       }
 
       scrollToBottom();
+      updateSidebarStatus(status);
     }
 
     function escapeHtml(text) {
@@ -4213,6 +4574,133 @@
 
     function closeAbout() {
       document.getElementById('about-modal').classList.remove('show');
+    }
+
+    // ========== SIDEBAR STATUS ==========
+    const STATUS_DEBOUNCE_MS = 150;
+    let lastStatusUpdate = 0;
+    let lastIsWorking = false;
+    let pendingStatusUpdate = null;
+
+    function updateSidebarStatus(status) {
+      const workingTypes = ['thinking', 'tool_start', 'tool_end', 'subagent_start', 'subagent_update', 'subagent_end', 'responding', 'queued', 'queue_processing'];
+      const isWorking = workingTypes.includes(status.type);
+      const stateChanged = lastIsWorking !== isWorking;
+      const now = Date.now();
+
+      pendingStatusUpdate = { status, isWorking };
+
+      if (stateChanged || (now - lastStatusUpdate >= STATUS_DEBOUNCE_MS)) {
+        applySidebarStatusUpdate();
+      }
+    }
+
+    function applySidebarStatusUpdate() {
+      if (!pendingStatusUpdate) return;
+
+      const { status, isWorking } = pendingStatusUpdate;
+      pendingStatusUpdate = null;
+      lastStatusUpdate = Date.now();
+      lastIsWorking = isWorking;
+
+      requestAnimationFrame(() => {
+        const avatar = document.getElementById('sidebar-avatar');
+        const avatarGlow = document.getElementById('avatar-glow');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('sidebar-status-text');
+        const sidebarStatus = document.getElementById('sidebar-status');
+
+        if (!avatar || !statusText) return;
+
+        if (avatarGlow) {
+          avatarGlow.classList.toggle('working', isWorking);
+          avatarGlow.classList.toggle('idle', !isWorking);
+        }
+
+        if (statusDot) {
+          statusDot.classList.toggle('status-working', isWorking);
+          statusDot.classList.toggle('status-idle', !isWorking);
+        }
+
+        if (sidebarStatus) {
+          sidebarStatus.classList.toggle('status-working', isWorking);
+          sidebarStatus.classList.toggle('status-idle', !isWorking);
+        }
+
+        avatar.classList.toggle('working', isWorking);
+        avatar.classList.toggle('idle', !isWorking);
+
+        statusText.style.color = isWorking ? '#ffffff' : '#9ca3af';
+
+        if (status.type === 'thinking') {
+          statusText.textContent = 'Systems engaged';
+        } else if (status.type === 'tool_start') {
+          statusText.textContent = 'Scanning';
+        } else if (status.type === 'tool_end') {
+          statusText.textContent = 'Data received';
+        } else if (status.type === 'subagent_start' || status.type === 'subagent_update') {
+          const count = status.agentCount || 1;
+          statusText.textContent = `${count} drone${count > 1 ? 's' : ''} deployed`;
+        } else if (status.type === 'subagent_end') {
+          statusText.textContent = 'Drones returned';
+        } else if (status.type === 'responding') {
+          statusText.textContent = 'Transmitting';
+        } else if (status.type === 'done') {
+          statusText.textContent = 'Ready';
+        } else {
+          statusText.textContent = 'Ready';
+        }
+      });
+    }
+
+    // ========== SIDEBAR INIT ==========
+    function formatStartedTime(date) {
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+      if (diffMins < 1) return 'just now';
+      if (diffHours < 1) return `${diffMins}m ago at ${timeStr}`;
+      if (date.toDateString() === now.toDateString()) return `this morning ${timeStr}`;
+      return date.toLocaleDateString() + ' ' + timeStr;
+    }
+
+    async function updateSidebarModel() {
+      const modelEl = document.getElementById('sidebar-model-name');
+      if (!modelEl) return;
+      try {
+        const modelId = await window.pocketAgent.getSetting('agent.model');
+        if (modelId) {
+          modelEl.textContent = modelId;
+        }
+      } catch (err) { /* ignore */ }
+    }
+
+    function initSidebar() {
+      const startedEl = document.getElementById('started-value');
+      if (startedEl) {
+        const sessionStart = new Date();
+        startedEl.textContent = formatStartedTime(sessionStart);
+        setInterval(() => {
+          startedEl.textContent = formatStartedTime(sessionStart);
+        }, 60000);
+      }
+
+      updateSidebarModel();
+      setInterval(updateSidebarModel, 10000);
+    }
+
+    function switchMainView(view) {
+      document.querySelectorAll('.main-nav-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`nav-${view}`)?.classList.add('active');
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSidebar);
+    } else {
+      initSidebar();
     }
   </script>
 </body>
