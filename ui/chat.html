@@ -7,7 +7,7 @@
   <title>Pocket Agent</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Jura:wght@400;700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     :root {
@@ -85,7 +85,7 @@
       border: 1px solid var(--border);
       border-bottom: none;
       color: var(--text-secondary);
-      font-family: 'Pixelify Sans', sans-serif;
+      font-family: 'Jura', sans-serif;
       font-size: 12px;
       font-weight: 400;
       cursor: grab;
@@ -155,7 +155,7 @@
       border: 1px solid var(--accent);
       border-radius: 4px;
       color: var(--text-primary);
-      font-family: 'Pixelify Sans', sans-serif;
+      font-family: 'Jura', sans-serif;
       font-size: 12px;
       font-weight: 400;
       padding: 2px 6px;
@@ -238,7 +238,7 @@
     }
 
     header h1 {
-      font-family: 'Pixelify Sans', sans-serif;
+      font-family: 'Jura', sans-serif;
       font-size: 16px;
       font-weight: 700;
       letter-spacing: 0;
@@ -395,7 +395,7 @@
       width: 100%;
       text-align: left;
       color: var(--text-secondary);
-      font-family: 'Pixelify Sans', sans-serif;
+      font-family: 'Jura', sans-serif;
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
@@ -483,7 +483,7 @@
     }
 
     .modal-title h2 {
-      font-family: 'Pixelify Sans', sans-serif;
+      font-family: 'Jura', sans-serif;
       font-size: 15px;
       font-weight: 700;
       margin: 0;
@@ -729,6 +729,18 @@
 
     .sidebar-status.status-working { color: #ffffff; }
     .sidebar-status.status-idle { color: #9ca3af; }
+
+    .sidebar-status.status-working #sidebar-status-text::after {
+      content: '';
+      animation: dotPulse 1.4s steps(4, end) infinite;
+    }
+
+    @keyframes dotPulse {
+      0%  { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+    }
 
     @keyframes statusPulse {
       0%, 100% { opacity: 1; }
@@ -1425,7 +1437,7 @@
     }
 
     .status-action {
-      font-family: 'Pixelify Sans', sans-serif;
+      font-family: 'Jura', sans-serif;
       font-size: 13px;
       font-weight: 400;
       background: linear-gradient(
@@ -1927,7 +1939,7 @@
     }
 
     .empty-state .empty-title {
-      font-family: 'Pixelify Sans', sans-serif;
+      font-family: 'Jura', sans-serif;
       font-size: 24px;
       font-weight: 700;
       background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
