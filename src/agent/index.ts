@@ -542,30 +542,13 @@ class AgentManagerClass extends EventEmitter {
 
       this.emitStatus({ type: 'done' });
 
-      // If no text response, make a follow-up call to get one
+      // If no text response after all SDK messages (rare — the result event
+      // should always carry text), use a static fallback rather than making a
+      // second query() call that has no context about what tools were used and
+      // could hallucinate stale information from the system prompt.
       if (!response) {
-        console.log('[AgentManager] No text response, requesting summary...');
-        this.emitStatus({ type: 'thinking', message: 'summarizing...' });
-
-        const summaryResult = query({
-          prompt: 'Briefly summarize what you just did in 1-2 sentences.',
-          options: {
-            ...options,
-            maxThinkingTokens: undefined, // No extended thinking for summary
-          },
-        });
-
-        for await (const message of summaryResult) {
-          if (abortController.signal.aborted) break;
-          response = this.extractFromMessage(message, response);
-        }
-
-        // Final fallback if summary also fails
-        if (!response) {
-          response = 'Done.';
-        }
-
-        this.emitStatus({ type: 'done' });
+        console.log('[AgentManager] No text response from SDK result — using static fallback');
+        response = 'Done.';
       }
 
       // Skip saving HEARTBEAT_OK responses from scheduled jobs to memory/chat
@@ -1013,12 +996,14 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
           .filter((block: unknown) => (block as { type?: string })?.type === 'text')
           .map((block: unknown) => (block as { text: string }).text);
         const text = textBlocks.join('\n');
+        // Skip empty text blocks (tool-only assistant turns) to preserve previous response
+        if (!text.trim()) return current;
         // Extract and strip any trailing "User:" suggested prompts
         const { text: cleanedText, suggestion } = this.extractSuggestedPrompt(text);
         if (suggestion) {
           this.lastSuggestedPrompt = suggestion;
         }
-        return cleanedText;
+        return cleanedText || current;
       }
     }
 
@@ -1030,7 +1015,7 @@ notify(title="Reminder", body="Meeting in 5 minutes", urgency="critical")
         if (suggestion) {
           this.lastSuggestedPrompt = suggestion;
         }
-        return cleanedText;
+        return cleanedText || current;
       }
     }
 

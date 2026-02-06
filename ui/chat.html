@@ -17,7 +17,7 @@
       --bg-tertiary: #334155;     /* CLAWD slate hover */
       --border: #334155;          /* slate-700 */
       --border-subtle: #475569;   /* slate-600 */
-      --text-primary: #f1f5f9;    /* CLAWD foreground - slate-100 */
+      --text-primary: #E8E8E8;    /* CLAWD foreground - off-white */
       --text-secondary: #94a3b8;  /* slate-400 */
       --text-muted: #64748b;      /* slate-500 */
       --accent: #10b981;          /* CLAWD emerald accent */
@@ -831,12 +831,12 @@
 
     .side-panel-actions button {
       background: transparent;
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.08);
       color: var(--text-muted);
       cursor: pointer;
       padding: 4px 6px;
       border-radius: 4px;
-      font-size: 14px;
+      font-size: 24px;
       line-height: 1;
       transition: all 0.15s ease;
     }
@@ -844,6 +844,10 @@
     .side-panel-actions button:hover {
       background: var(--bg-tertiary);
       color: var(--text-primary);
+    }
+
+    .side-panel-actions .side-panel-close {
+      font-size: 16px !important;
     }
 
     .side-panel-content {
@@ -891,7 +895,6 @@
       align-items: center;
       justify-content: space-between;
       padding: 8px 12px;
-      border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
 
@@ -921,14 +924,13 @@
 
     .docs-search {
       padding: 8px 12px;
-      border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
 
     .docs-search input {
       width: 100%;
       background: var(--bg-primary);
-      border: 1px solid var(--border);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       color: var(--text-primary);
       font-family: 'Sora', sans-serif;
       font-size: 12px;
@@ -949,7 +951,7 @@
     .docs-list {
       flex: 1;
       overflow-y: auto;
-      padding: 4px 0;
+      padding: 4px 6px;
     }
 
     .docs-empty {
@@ -977,12 +979,23 @@
       gap: 10px;
       padding: 10px 12px;
       cursor: pointer;
-      transition: background 0.12s ease;
-      border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+      transition: background 0.15s ease;
+      border-bottom: none;
+      border-radius: 6px;
+      animation: docItemIn 0.25s ease-out both;
+    }
+
+    .doc-item:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
     }
 
     .doc-item:hover {
-      background: var(--bg-tertiary);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    @keyframes docItemIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .doc-type-badge {
@@ -999,6 +1012,7 @@
       text-transform: uppercase;
       background: rgba(16, 185, 129, 0.15);
       color: var(--accent);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
     }
 
     .doc-item-info {
@@ -1047,6 +1061,94 @@
     .doc-item-actions button:hover {
       color: var(--error);
       background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* Logs Panel */
+    .log-date-group {
+      padding: 0 10px;
+    }
+
+    .log-date-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'Jura', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-muted);
+      padding: 10px 0 5px 0;
+      border-bottom: 1px solid;
+      border-image: linear-gradient(to right, var(--accent), transparent) 1;
+      margin-bottom: 4px;
+    }
+
+    .log-entry {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 7px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 6px;
+      transition: background 0.15s ease;
+      cursor: default;
+      animation: logEntryIn 0.25s ease-out both;
+    }
+
+    .log-entry:hover {
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    @keyframes logEntryIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .log-entry-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+
+    .log-entry-dot.cron { background: #a855f7; box-shadow: 0 0 6px rgba(168, 85, 247, 0.4); }
+    .log-entry-dot.doc { background: var(--accent); box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
+    .log-entry-dot.activity { background: #3b82f6; box-shadow: 0 0 6px rgba(59, 130, 246, 0.4); }
+    .log-entry-dot.error { background: var(--error); box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+
+    .log-entry-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .log-entry-header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .log-entry-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .log-entry-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      word-break: break-word;
+    }
+
+    .log-entry-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin-top: 3px;
     }
 
     /* Docs Viewer */
@@ -5036,12 +5138,7 @@
     let panelMaximized = false;
     let splitRatio = 0.55;
 
-    const panelPlaceholders = {
-      logs: {
-        icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
-        text: 'Coming soon'
-      }
-    };
+    const panelPlaceholders = {};
 
     function switchTab(tabName) {
       const navBtns = document.querySelectorAll('.sidebar-nav-btn');
@@ -5078,6 +5175,8 @@
         document.getElementById('side-panel-title').textContent = tabName.charAt(0).toUpperCase() + tabName.slice(1);
         if (tabName === 'docs') {
           loadDocsPanel();
+        } else if (tabName === 'logs') {
+          loadLogsPanel();
         } else {
           const placeholder = panelPlaceholders[tabName];
           if (placeholder) {
@@ -5189,6 +5288,7 @@
           const q = query.toLowerCase();
           filtered = cachedDocs.filter(d => d.filename.toLowerCase().includes(q));
         }
+        filtered.sort((a, b) => new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime());
         renderDocsList(filtered);
       } catch (err) {
         console.error('Failed to load docs:', err);
@@ -5217,15 +5317,16 @@
         return;
       }
 
-      list.innerHTML = docs.map(doc => {
+      list.innerHTML = docs.map((doc, idx) => {
         const title = formatDocTitle(doc.filename);
-        const date = new Date(doc.modified_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        const dateObj = new Date(doc.modified_at);
+        const date = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ', ' + dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
         const size = formatFileSize(doc.size_bytes);
         const ext = doc.file_type || '?';
         const escapedPath = escapeHtml(doc.file_path);
         const escapedFilename = escapeHtml(doc.filename);
         return (
-          '<div class="doc-item" onclick="openDocument(\'' + escapedFilename + '\')">' +
+          '<div class="doc-item" style="animation-delay: ' + (idx * 30) + 'ms" onclick="openDocument(\'' + escapedFilename + '\')">' +
             '<div class="doc-type-badge">' + escapeHtml(ext) + '</div>' +
             '<div class="doc-item-info">' +
               '<div class="doc-item-title">' + escapeHtml(title) + '</div>' +
@@ -5336,6 +5437,202 @@
       } catch (err) {
         console.error('Failed to import document:', err);
       }
+    }
+
+    /* ========== LOGS PANEL ========== */
+    let cachedLogs = [];
+    let logsSearchTimeout = null;
+
+    function loadLogsPanel() {
+      const content = document.getElementById('side-panel-content');
+      content.style.position = 'relative';
+      content.innerHTML =
+        '<div class="docs-container">' +
+          '<div class="docs-toolbar">' +
+            '<span class="docs-toolbar-count" id="logs-count"></span>' +
+            '<button class="docs-toolbar-btn" onclick="refreshLogsList()">Refresh</button>' +
+          '</div>' +
+          '<div class="docs-search">' +
+            '<input type="text" id="logs-search-input" placeholder="Search logs..." oninput="handleLogsSearch(this.value)">' +
+          '</div>' +
+          '<div class="docs-list" id="logs-list"></div>' +
+        '</div>';
+      refreshLogsList();
+    }
+
+    async function refreshLogsList(query) {
+      try {
+        const [cronHistory, documents, dailyLogs] = await Promise.all([
+          window.pocketAgent.getCronHistory(50),
+          window.pocketAgent.listDocuments(),
+          window.pocketAgent.getDailyLogs(7)
+        ]);
+
+        const logs = [];
+
+        cronHistory.forEach(function(entry) {
+          logs.push({
+            type: 'cron',
+            title: entry.jobName,
+            detail: summarizeContent(entry.response),
+            timestamp: new Date(entry.timestamp),
+            success: entry.success
+          });
+        });
+
+        documents.forEach(function(doc) {
+          var isNew = doc.created_at === doc.modified_at;
+          logs.push({
+            type: 'doc',
+            title: (isNew ? 'Created' : 'Updated') + ': ' + doc.filename,
+            detail: '',
+            timestamp: new Date(doc.modified_at),
+            success: true
+          });
+        });
+
+        dailyLogs.forEach(function(day) {
+          var lines = (day.content || '').split('\n');
+          lines.forEach(function(line) {
+            line = line.trim();
+            if (!line) return;
+            // Parse "[HH:MM AM/PM] text" format
+            var match = line.match(/^\[(\d{1,2}:\d{2}\s*[AP]M)\]\s*(.+)$/i);
+            var entryTime;
+            var text;
+            if (match) {
+              // Build a full timestamp from the date + parsed time
+              var timeParts = match[1];
+              entryTime = new Date(day.date + 'T12:00:00');
+              try {
+                var parsed = new Date(day.date + ' ' + timeParts);
+                if (!isNaN(parsed.getTime())) entryTime = parsed;
+              } catch (e) { /* use fallback */ }
+              text = match[2];
+            } else {
+              entryTime = new Date(day.updated_at || day.date);
+              text = line;
+            }
+            logs.push({
+              type: 'activity',
+              title: text,
+              detail: '',
+              timestamp: entryTime,
+              success: true
+            });
+          });
+        });
+
+        logs.sort(function(a, b) { return b.timestamp.getTime() - a.timestamp.getTime(); });
+        cachedLogs = logs;
+
+        var filtered = logs;
+        if (query) {
+          var q = query.toLowerCase();
+          filtered = logs.filter(function(l) {
+            return l.title.toLowerCase().includes(q) || l.detail.toLowerCase().includes(q) || l.type.toLowerCase().includes(q);
+          });
+        }
+
+        renderLogsList(filtered);
+      } catch (err) {
+        console.error('Failed to load logs:', err);
+      }
+    }
+
+    function renderLogsList(logs) {
+      var list = document.getElementById('logs-list');
+      var countEl = document.getElementById('logs-count');
+      if (!list) return;
+
+      if (countEl) {
+        countEl.textContent = logs.length + ' entr' + (logs.length !== 1 ? 'ies' : 'y');
+      }
+
+      if (logs.length === 0) {
+        list.innerHTML =
+          '<div class="docs-empty">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' +
+              '<line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line>' +
+              '<line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>' +
+            '</svg>' +
+            '<span>No activity yet</span>' +
+            '<span style="font-size: 11px; color: var(--text-muted);">Scheduled tasks and documents will appear here</span>' +
+          '</div>';
+        return;
+      }
+
+      // Group by date
+      var grouped = {};
+      var dateOrder = [];
+      logs.forEach(function(log) {
+        var label = getDateLabel(log.timestamp);
+        if (!grouped[label]) {
+          grouped[label] = [];
+          dateOrder.push(label);
+        }
+        grouped[label].push(log);
+      });
+
+      var html = '';
+      var entryIdx = 0;
+      dateOrder.forEach(function(dateLabel) {
+        var entries = grouped[dateLabel];
+        html += '<div class="log-date-group">' +
+          '<div class="log-date-header">' + escapeHtml(dateLabel) + '</div>';
+
+        entries.forEach(function(log) {
+          var timeStr = log.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+          var dotClass = 'log-entry-dot ' + (log.type === 'cron' && !log.success ? 'error' : log.type);
+
+          var detailHtml = '';
+          if (log.detail) {
+            detailHtml = '<div class="log-entry-text">' + escapeHtml(log.detail) + '</div>';
+          }
+
+          html +=
+            '<div class="log-entry" style="animation-delay: ' + (entryIdx * 30) + 'ms">' +
+              '<div class="' + dotClass + '"></div>' +
+              '<div class="log-entry-body">' +
+                '<div class="log-entry-header">' +
+                  '<span class="log-entry-time">' + timeStr + '</span>' +
+                  '<span class="log-entry-title">' + escapeHtml(log.title) + '</span>' +
+                '</div>' +
+                detailHtml +
+              '</div>' +
+            '</div>';
+          entryIdx++;
+        });
+
+        html += '</div>';
+      });
+
+      list.innerHTML = html;
+    }
+
+    function getDateLabel(date) {
+      return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    }
+
+    function summarizeContent(text) {
+      if (!text) return '';
+      var plain = text.replace(/[#*_~`>\-\[\]()!]/g, '').replace(/\n+/g, ' ').trim();
+      if (plain.length <= 200) return plain;
+      return plain.substring(0, 197) + '...';
+    }
+
+    function handleLogsSearch(query) {
+      clearTimeout(logsSearchTimeout);
+      logsSearchTimeout = setTimeout(function() {
+        var filtered = cachedLogs;
+        if (query) {
+          var q = query.toLowerCase();
+          filtered = cachedLogs.filter(function(l) {
+            return l.title.toLowerCase().includes(q) || l.detail.toLowerCase().includes(q) || l.type.toLowerCase().includes(q);
+          });
+        }
+        renderLogsList(filtered);
+      }, 250);
     }
 
     function initSidebar() {

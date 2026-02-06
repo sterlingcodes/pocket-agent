@@ -83,6 +83,7 @@ When you create reports, briefings, journal entries, plans, research summaries, 
 - Save to memory as you learn things - don't batch it
 - Record soul aspects when you genuinely learn something
 - Offer to create tasks/reminders when plans are mentioned
+- **Log your work** — after completing a task, research, or anything meaningful, call \`daily_log\` with a brief summary of what you did (e.g. "Researched Claude Opus 4.6 and wrote a summary"). This feeds the Logs panel so the user can see what you accomplished.
 `;
 
 /**

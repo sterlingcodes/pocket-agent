@@ -230,6 +230,11 @@ export function getCreateRoutineToolDefinition() {
           type: 'string',
           description: 'The prompt sent to the LLM when triggered. Write as an instruction: "Check the weather in KL and tell me", "Summarize today\'s tech news", "Research competitors for X".',
         },
+        channel: {
+          type: 'string',
+          enum: ['desktop', 'telegram'],
+          description: 'Where to deliver the response. "desktop" for desktop only, "telegram" to send to Telegram (and desktop for visibility). Defaults to "desktop".',
+        },
       },
       required: ['name', 'schedule', 'prompt'],
     },
@@ -241,10 +246,11 @@ export function getCreateRoutineToolDefinition() {
  * Supports natural language scheduling in addition to cron
  */
 export async function handleCreateRoutineTool(input: unknown): Promise<string> {
-  const { name, schedule, prompt } = input as {
+  const { name, schedule, prompt, channel } = input as {
     name: string;
     schedule: string;
     prompt: string;
+    channel?: string;
   };
 
   if (!name || !schedule || !prompt) {
@@ -298,8 +304,8 @@ export async function handleCreateRoutineTool(input: unknown): Promise<string> {
     // Auto-enable delete-after for one-time "at" jobs
     const deleteAfterRun = parsed.type === 'at' ? 1 : 0;
 
-    // Channel is always 'desktop' - routing broadcasts to all configured channels
-    const targetChannel = 'desktop';
+    // Use the user-specified channel, defaulting to 'desktop'
+    const targetChannel = channel === 'telegram' ? 'telegram' : 'desktop';
 
     const nextRunAt = calculateNextRun(
       parsed.type,
@@ -347,7 +353,7 @@ export async function handleCreateRoutineTool(input: unknown): Promise<string> {
       scheduleDesc = `cron: ${parsed.schedule}`;
     }
 
-    console.log(`[Scheduler] Routine created: ${name} (${parsed.type})`);
+    console.log(`[Scheduler] Routine created: ${name} (${parsed.type}, channel: ${targetChannel})`);
     return JSON.stringify({
       success: true,
       message: `Routine "${name}" created`,
@@ -389,6 +395,11 @@ export function getCreateReminderToolDefinition() {
           type: 'string',
           description: 'The exact message to display. Examples: "Hey Ken! Time to take a shower 🚿", "Don\'t forget to call mom! 📱". Write a friendly, complete message.',
         },
+        channel: {
+          type: 'string',
+          enum: ['desktop', 'telegram'],
+          description: 'Where to deliver the reminder. "desktop" for desktop only, "telegram" to send to Telegram (and desktop for visibility). Defaults to "desktop".',
+        },
       },
       required: ['name', 'schedule', 'reminder'],
     },
@@ -399,10 +410,11 @@ export function getCreateReminderToolDefinition() {
  * Create reminder tool handler
  */
 export async function handleCreateReminderTool(input: unknown): Promise<string> {
-  const { name, schedule, reminder } = input as {
+  const { name, schedule, reminder, channel } = input as {
     name: string;
     schedule: string;
     reminder: string;
+    channel?: string;
   };
 
   if (!name || !schedule || !reminder) {
@@ -456,8 +468,8 @@ export async function handleCreateReminderTool(input: unknown): Promise<string> 
     // Auto-enable delete-after for one-time "at" jobs
     const deleteAfterRun = parsed.type === 'at' ? 1 : 0;
 
-    // Channel is always 'desktop' - routing broadcasts to all configured channels
-    const targetChannel = 'desktop';
+    // Use the user-specified channel, defaulting to 'desktop'
+    const targetChannel = channel === 'telegram' ? 'telegram' : 'desktop';
 
     const nextRunAt = calculateNextRun(
       parsed.type,
@@ -505,7 +517,7 @@ export async function handleCreateReminderTool(input: unknown): Promise<string> 
       scheduleDesc = `cron: ${parsed.schedule}`;
     }
 
-    console.log(`[Scheduler] Reminder created: ${name} (${parsed.type})`);
+    console.log(`[Scheduler] Reminder created: ${name} (${parsed.type}, channel: ${targetChannel})`);
     return JSON.stringify({
       success: true,
       message: `Reminder "${name}" created`,

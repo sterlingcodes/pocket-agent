@@ -82,6 +82,7 @@ contextBridge.exposeInMainWorld('pocketAgent', {
   toggleCronJob: (name: string, enabled: boolean) => ipcRenderer.invoke('cron:toggle', name, enabled),
   runCronJob: (name: string) => ipcRenderer.invoke('cron:run', name),
   getCronHistory: (limit?: number) => ipcRenderer.invoke('cron:history', limit),
+  getDailyLogs: (days?: number) => ipcRenderer.invoke('logs:daily', days),
 
   // App info
   getAppVersion: () => ipcRenderer.invoke('app:getVersion'),
@@ -220,6 +221,7 @@ declare global {
       toggleCronJob: (name: string, enabled: boolean) => Promise<{ success: boolean }>;
       runCronJob: (name: string) => Promise<{ jobName: string; response: string; success: boolean; error?: string } | null>;
       getCronHistory: (limit?: number) => Promise<Array<{ jobName: string; response: string; success: boolean; timestamp: string }>>;
+      getDailyLogs: (days?: number) => Promise<Array<{ id: number; date: string; content: string; updated_at: string }>>;
       // App info
       getAppVersion: () => Promise<string>;
       // Settings

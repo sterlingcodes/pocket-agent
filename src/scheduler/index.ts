@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import { AgentManager } from '../agent';
 import { MemoryManager, CronJob } from '../memory';
 import type { TelegramBot } from '../channels/telegram';
+import { SettingsManager } from '../settings';
 
 /**
  * Silent acknowledgment token for scheduled tasks.
@@ -426,7 +427,10 @@ export class CronScheduler {
   /**
    * Route job response to appropriate channel(s).
    * Skips notification if response is just HEARTBEAT_OK (nothing to report).
-   * Always sends to desktop (to the correct session), and also to Telegram if configured.
+   * Respects the channel field:
+   * - 'telegram': send to Telegram (and desktop for visibility)
+   * - 'desktop': send to desktop only
+   * - default: send to desktop, and also Telegram if session has a linked chat
    */
   private async routeJobResponse(jobName: string, prompt: string, response: string, channel: string, sessionId: string = 'default'): Promise<void> {
     // Check for silent acknowledgment - agent has nothing to report
@@ -436,49 +440,111 @@ export class CronScheduler {
       return;
     }
 
-    // Always send to desktop (notification + chat to the correct session)
     const plainResponse = this.stripMarkdown(response);
-    if (this.onNotification) {
-      this.onNotification('Pocket Agent', plainResponse.slice(0, 200));
-    }
-    if (this.onChatMessage) {
-      this.onChatMessage(jobName, prompt, response, sessionId);
-    }
 
-    // Also send to Telegram if configured AND session has a linked chat
-    if (this.telegramBot && this.memory) {
-      const linkedChatId = this.memory.getChatForSession(sessionId);
-      if (linkedChatId) {
-        await this.telegramBot.sendMessage(linkedChatId, response);
+    if (channel === 'telegram') {
+      // Telegram-targeted: send to Telegram, plus desktop for visibility
+      if (this.onNotification) {
+        this.onNotification('Pocket Agent', plainResponse.slice(0, 200));
+      }
+      if (this.onChatMessage) {
+        this.onChatMessage(jobName, prompt, response, sessionId);
+      }
+
+      if (this.telegramBot) {
+        const chatId = this.resolveTelegramChatId(sessionId);
+        if (chatId) {
+          await this.telegramBot.sendMessage(chatId, response);
+        } else {
+          console.warn(`[Scheduler] Job ${jobName} targets Telegram but no chat ID found`);
+        }
+      } else {
+        console.warn(`[Scheduler] Job ${jobName} targets Telegram but bot not connected`);
+      }
+    } else if (channel === 'desktop') {
+      // Desktop-only: notification + chat
+      if (this.onNotification) {
+        this.onNotification('Pocket Agent', plainResponse.slice(0, 200));
+      }
+      if (this.onChatMessage) {
+        this.onChatMessage(jobName, prompt, response, sessionId);
+      }
+    } else {
+      // Default/unknown: desktop + Telegram if session is linked
+      if (this.onNotification) {
+        this.onNotification('Pocket Agent', plainResponse.slice(0, 200));
+      }
+      if (this.onChatMessage) {
+        this.onChatMessage(jobName, prompt, response, sessionId);
+      }
+
+      if (this.telegramBot && this.memory) {
+        const linkedChatId = this.memory.getChatForSession(sessionId);
+        if (linkedChatId) {
+          await this.telegramBot.sendMessage(linkedChatId, response);
+        }
       }
     }
   }
 
   /**
    * Send a reminder notification.
-   * Always sends to desktop (to the correct session), and also to Telegram if configured.
+   * Respects the channel field:
+   * - 'telegram': send to Telegram (and desktop for visibility)
+   * - 'desktop': send to desktop only
+   * - default: send to desktop, and also Telegram if session has a linked chat
    */
   private async sendReminder(type: 'calendar' | 'task', title: string, message: string, channel: string, sessionId: string = 'default'): Promise<void> {
-    console.log(`[Scheduler] Sending ${type} reminder: ${title} (session: ${sessionId})`);
+    console.log(`[Scheduler] Sending ${type} reminder: ${title} (session: ${sessionId}, channel: ${channel})`);
 
     // Save reminder to messages table for persistence and history display
     if (this.memory) {
       this.memory.saveMessage('assistant', message, sessionId, { source: 'scheduler', jobName: `${type}_reminder` });
     }
 
-    // Always send to desktop (notification + chat to the correct session)
-    if (this.onNotification) {
-      this.onNotification('Pocket Agent', message);
-    }
-    if (this.onChatMessage) {
-      this.onChatMessage(`${type}_reminder`, message, message, sessionId);
-    }
+    const telegramPrefix = type === 'calendar' ? '📅' : '✓';
 
-    // Also send to Telegram if configured AND session has a linked chat
-    if (this.telegramBot && this.memory) {
-      const linkedChatId = this.memory.getChatForSession(sessionId);
-      if (linkedChatId) {
-        await this.telegramBot.sendMessage(linkedChatId, `${type === 'calendar' ? '📅' : '✓'} ${message}`);
+    if (channel === 'telegram') {
+      // Telegram-targeted: send to Telegram, plus desktop for visibility
+      if (this.onNotification) {
+        this.onNotification('Pocket Agent', message);
+      }
+      if (this.onChatMessage) {
+        this.onChatMessage(`${type}_reminder`, message, message, sessionId);
+      }
+
+      if (this.telegramBot) {
+        const chatId = this.resolveTelegramChatId(sessionId);
+        if (chatId) {
+          await this.telegramBot.sendMessage(chatId, `${telegramPrefix} ${message}`);
+        } else {
+          console.warn(`[Scheduler] Reminder ${title} targets Telegram but no chat ID found`);
+        }
+      } else {
+        console.warn(`[Scheduler] Reminder ${title} targets Telegram but bot not connected`);
+      }
+    } else if (channel === 'desktop') {
+      // Desktop-only
+      if (this.onNotification) {
+        this.onNotification('Pocket Agent', message);
+      }
+      if (this.onChatMessage) {
+        this.onChatMessage(`${type}_reminder`, message, message, sessionId);
+      }
+    } else {
+      // Default/unknown: desktop + Telegram if session is linked
+      if (this.onNotification) {
+        this.onNotification('Pocket Agent', message);
+      }
+      if (this.onChatMessage) {
+        this.onChatMessage(`${type}_reminder`, message, message, sessionId);
+      }
+
+      if (this.telegramBot && this.memory) {
+        const linkedChatId = this.memory.getChatForSession(sessionId);
+        if (linkedChatId) {
+          await this.telegramBot.sendMessage(linkedChatId, `${telegramPrefix} ${message}`);
+        }
       }
     }
 
@@ -498,6 +564,34 @@ export class CronScheduler {
   setTelegramBot(bot: TelegramBot): void {
     this.telegramBot = bot;
     console.log('[Scheduler] Telegram bot connected');
+  }
+
+  /**
+   * Resolve the Telegram chat ID for sending a message.
+   * Priority: session-linked chat > settings default chat > first active chat
+   * Returns null if no chat ID can be determined.
+   */
+  private resolveTelegramChatId(sessionId: string): number | null {
+    // 1. Check session-linked chat
+    if (this.memory) {
+      const linkedChatId = this.memory.getChatForSession(sessionId);
+      if (linkedChatId) return linkedChatId;
+    }
+
+    // 2. Check settings default chat ID
+    const defaultChatStr = SettingsManager.get('telegram.defaultChatId');
+    if (defaultChatStr) {
+      const defaultChatId = parseInt(defaultChatStr, 10);
+      if (!isNaN(defaultChatId)) return defaultChatId;
+    }
+
+    // 3. Fall back to first active chat
+    if (this.telegramBot) {
+      const activeChats = this.telegramBot.getActiveChatIds();
+      if (activeChats.length > 0) return activeChats[0];
+    }
+
+    return null;
   }
 
   /**
@@ -632,29 +726,58 @@ export class CronScheduler {
 
   /**
    * Route response to appropriate channel(s).
-   * Always sends to desktop, and also to Telegram if configured and session has a linked chat.
+   * Respects the job's channel field:
+   * - 'telegram': send to Telegram (and desktop for visibility)
+   * - 'desktop': send to desktop only
+   * - default: send to desktop, and also Telegram if session has a linked chat
    */
   private async routeResponse(job: ScheduledJob, response: string): Promise<void> {
     const sessionId = job.sessionId || 'default';
-
-    // Always send to desktop (chat window + notification)
-    this.emitChatMessage(job.name, job.prompt, response, sessionId);
+    const channel = job.channel || 'desktop';
     const plainResponse = this.stripMarkdown(response);
-    this.emitDesktopNotification('Pocket Agent', plainResponse.slice(0, 200));
 
-    // Also send to Telegram if configured and session has a linked chat
-    if (this.telegramBot && this.memory) {
-      if (job.recipient) {
-        // Send to specific chat (explicitly specified)
-        const chatId = parseInt(job.recipient, 10);
-        if (!isNaN(chatId)) {
-          await this.telegramBot.sendMessage(chatId, `📅 ${job.name}\n\n${response}`);
+    if (channel === 'telegram') {
+      // Telegram-targeted job: send to Telegram, plus desktop for visibility
+      this.emitChatMessage(job.name, job.prompt, response, sessionId);
+      this.emitDesktopNotification('Pocket Agent', plainResponse.slice(0, 200));
+
+      if (this.telegramBot) {
+        if (job.recipient) {
+          const chatId = parseInt(job.recipient, 10);
+          if (!isNaN(chatId)) {
+            await this.telegramBot.sendMessage(chatId, `📅 ${job.name}\n\n${response}`);
+          }
+        } else {
+          const chatId = this.resolveTelegramChatId(sessionId);
+          if (chatId) {
+            await this.telegramBot.sendMessage(chatId, `📅 ${job.name}\n\n${response}`);
+          } else {
+            console.warn(`[Scheduler] Job ${job.name} targets Telegram but no chat ID found`);
+          }
         }
       } else {
-        // Send to session's linked chat if it exists
-        const linkedChatId = this.memory.getChatForSession(sessionId);
-        if (linkedChatId) {
-          await this.telegramBot.sendMessage(linkedChatId, `📅 ${job.name}\n\n${response}`);
+        console.warn(`[Scheduler] Job ${job.name} targets Telegram but bot not connected`);
+      }
+    } else if (channel === 'desktop') {
+      // Desktop-only job: send to desktop only
+      this.emitChatMessage(job.name, job.prompt, response, sessionId);
+      this.emitDesktopNotification('Pocket Agent', plainResponse.slice(0, 200));
+    } else {
+      // Default/unknown channel: send to desktop, and Telegram if session is linked
+      this.emitChatMessage(job.name, job.prompt, response, sessionId);
+      this.emitDesktopNotification('Pocket Agent', plainResponse.slice(0, 200));
+
+      if (this.telegramBot) {
+        if (job.recipient) {
+          const chatId = parseInt(job.recipient, 10);
+          if (!isNaN(chatId)) {
+            await this.telegramBot.sendMessage(chatId, `📅 ${job.name}\n\n${response}`);
+          }
+        } else if (this.memory) {
+          const linkedChatId = this.memory.getChatForSession(sessionId);
+          if (linkedChatId) {
+            await this.telegramBot.sendMessage(linkedChatId, `📅 ${job.name}\n\n${response}`);
+          }
         }
       }
     }

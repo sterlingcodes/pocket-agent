@@ -600,6 +600,7 @@ describe('TelegramBot', () => {
         channel: 'telegram',
         chatId: 1000,
         sessionId: 'default',
+        wasCompacted: false,
       });
     });
   });

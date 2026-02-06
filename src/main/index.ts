@@ -1347,6 +1347,10 @@ function setupIPC(): void {
     return scheduler?.getHistory(limit) || [];
   });
 
+  ipcMain.handle('logs:daily', async (_, days: number = 7) => {
+    return memory?.getRecentDailyLogs(days) || [];
+  });
+
   // App info
   ipcMain.handle('app:getVersion', () => {
     return app.getVersion();
